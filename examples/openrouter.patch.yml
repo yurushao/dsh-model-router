@@ -1,0 +1,37 @@
+# For a dedicated web profile. This replaces the llm-pi-ai provider dictionary.
+# Keep other provider entries if merging into an existing profile.
+- id: llm-pi-ai
+  config:
+    providers:
+      openrouter:
+        displayName: OpenRouter
+        apiKeyEnv: OPENROUTER_API_KEY
+        api: openai-completions
+        baseURL: https://openrouter.ai/api/v1
+        models:
+          - id: !!js process.env.JEV_ECONOMY_MODEL
+            name: Economy
+            maxTokens: 2048
+          - id: !!js process.env.JEV_FRONTIER_MODEL
+            name: Frontier
+            maxTokens: 8192
+- id: jev-router
+  disabled: false
+  config:
+    apiKey: !!js process.env.OPENROUTER_API_KEY
+    historyMessages: 0
+    economyThreshold: 0.8
+    newTaskThreshold: 0.9
+    models:
+      economy:
+        provider: openrouter
+        model: !!js process.env.JEV_ECONOMY_MODEL
+        description: Low-cost model for translation, extraction, rewriting and routine tasks.
+        supportsTools: true
+        supportsImages: false
+      frontier:
+        provider: openrouter
+        model: !!js process.env.JEV_FRONTIER_MODEL
+        description: Strong model for complex coding, debugging, research and reasoning.
+        supportsTools: true
+        supportsImages: false

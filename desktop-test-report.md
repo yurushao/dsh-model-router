@@ -3,7 +3,7 @@ created: 2026-09-23
 updated: 2026-09-23
 ---
 
-# Jev 0.3.0 桌面自动化测试
+# DSH Model Router 桌面自动化测试（初测版本 0.3.0）
 
 [已验证] 通过 Harness Dev 原生界面执行 8 轮真实请求，并读取本地会话事件交叉核对。会话 ID：`session-d8f9813c-de3b-471e-a74e-abe61e16bf4a`。本轮未修改路由实现或模型配置，应用最终保持 Auto 模式。
 
