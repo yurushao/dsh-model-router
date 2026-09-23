@@ -1,0 +1,5 @@
+# Configure and enable this row in a profile overlay (see examples/router.patch.yml).
+- insert:
+    - id: jev-router
+      name: dsh-jev-router
+      disabled: true
