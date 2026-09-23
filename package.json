@@ -1,7 +1,7 @@
 {
-  "name": "dsh-jev-router",
-  "version": "0.3.4",
-  "description": "Per-turn Jev model routing for DeepSeek Harness",
+  "name": "@yurushao/dsh-model-router",
+  "version": "0.4.0",
+  "description": "DSH Model Router: automatic model selection for DeepSeek Harness, powered by Jev",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,7 +18,19 @@
     "examples",
     "scripts/smoke-jev.mjs",
     "scripts/eval-jev.mjs",
-    "scripts/desktop-routing-state.json"
+    "scripts/desktop-routing-state.json",
+    "LICENSE",
+    "NOTICE",
+    "compatibility",
+    "patches",
+    "scripts/prepare-harness.mjs",
+    "scripts/verify-install.mjs",
+    "scripts/installed-smoke.mjs",
+    "scripts/verify-host.mjs",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "CHANGELOG.md",
+    "docs"
   ],
   "dsh": {
     "bundle": {
@@ -29,10 +41,14 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "prepack": "bun run build"
+    "prepack": "bun run build",
+    "check": "bun run typecheck && bun run test && bun run build",
+    "test:install": "node scripts/verify-install.mjs",
+    "harness:prepare": "node scripts/prepare-harness.mjs",
+    "test:host": "node scripts/verify-host.mjs"
   },
   "engines": {
-    "node": "^22.19.0 || >=24.0.0"
+    "node": ">=24.15.0 <25"
   },
   "packageManager": "bun@1.3.3",
   "peerDependencies": {
@@ -59,5 +75,27 @@
     "@types/node": "24",
     "typescript": "^5.9.3",
     "vitest": "3.2.4"
+  },
+  "license": "MIT",
+  "author": "Yuru Shao",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yurushao/dsh-model-router.git"
+  },
+  "homepage": "https://github.com/yurushao/dsh-model-router#readme",
+  "bugs": {
+    "url": "https://github.com/yurushao/dsh-model-router/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "model-routing",
+    "jev",
+    "openrouter"
+  ],
+  "patchedDependencies": {
+    "@deepseek-ai/dsh-session@0.1.7-alpha.1": "patches/dsh-session-0.1.7-alpha.1.patch"
   }
 }

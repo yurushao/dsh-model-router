@@ -106,7 +106,7 @@ export function installMode(ctx: Context): void {
   const probe = Session.create(SessionId('jev-router-compatibility-check'))
   appendRouting(probe, initialRouting())
   if (probe.snapshotEvents()[0]?.ignorable !== true) {
-    throw new Error('jev-router: this version requires the local Harness build with informational-event append support')
+    throw new Error('jev-router: incompatible Harness Session API; prepare the pinned compatible host with scripts/prepare-harness.mjs (see README Compatibility)')
   }
   ctx.effect(() => ctx.llm.registerAdapter([AUTO.provider], new AutoAdapter()))
   const projection = {

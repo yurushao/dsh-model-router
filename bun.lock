@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "dsh-jev-router",
+      "name": "dsh-model-router",
       "dependencies": {
         "@deepseek-ai/schemastery": "3.18.3",
         "zod": "^4.3.6",
@@ -30,6 +30,9 @@
         "@deepseek-ai/dsh-system-prompt": "0.1.7-alpha.1",
       },
     },
+  },
+  "patchedDependencies": {
+    "@deepseek-ai/dsh-session@0.1.7-alpha.1": "patches/dsh-session-0.1.7-alpha.1.patch",
   },
   "packages": {
     "@deepseek-ai/cordis": ["@deepseek-ai/cordis@4.0.3", "", { "dependencies": { "@deepseek-ai/cosmokit": "^1.8.4", "@standard-schema/spec": "^1.1.0" }, "peerDependencies": { "@deepseek-ai/cordis-plugin-include": "^1.0.8", "@deepseek-ai/cordis-plugin-loader": "^1.0.4" }, "optionalPeers": ["@deepseek-ai/cordis-plugin-include", "@deepseek-ai/cordis-plugin-loader"], "bin": { "cordis": "bin.js" } }, "sha512-ka+8UVh1JDTqkrEcgkfGwquM3lsBmLDsJMNAQUgumY65tI7IIrLFSERcNfde5kF1rtSSktOJmsC9WmJLt4rd8A=="],

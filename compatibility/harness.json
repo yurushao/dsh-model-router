@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/deepseek-ai/deepseek-harness.git",
+  "commit": "c36a83ff6bb95e3f82cf79f9be7c724270a8aa61",
+  "version": "0.1.7-alpha.1",
+  "patch": "harness.patch",
+  "sha256": "cbdfbc96343df18addcc0a5be12649a905a9594c2665683a66aa7d224abe8e5d",
+  "node": "24.15.0",
+  "pnpm": "11.7.0"
+}

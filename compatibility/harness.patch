@@ -1,0 +1,955 @@
+diff --git a/docs/subsystems/session.i18n.yaml b/docs/subsystems/session.i18n.yaml
+index 878b270089ce4d4e518344525a81003bcd0a7575..0edc40eb8be49bbb6fab1646a73a6202a06054ab 100644
+--- a/docs/subsystems/session.i18n.yaml
++++ b/docs/subsystems/session.i18n.yaml
+@@ -2,5 +2,5 @@
+ # side as of the last confirmed-consistent state. Both languages carry equal authority;
+ # after editing either side, bring the other along and re-record with:
+ #   pnpm run verify-translation-pairing --write docs/subsystems/session.md
+-session.md: be48d4833bacbac31f3765e0b4d9cdcf6da9f4d7
+-session.zh.md: 093fc6d570e93dc5be42d8779fc4d5965085b7e0
++session.md: f28a52bb21646e3b2f67d0c98725ed12d9d035d9
++session.zh.md: 4db59fed3ec928f7f7dbc9635e0d23eeb329c481
+diff --git a/docs/subsystems/session.md b/docs/subsystems/session.md
+index be48d4833bacbac31f3765e0b4d9cdcf6da9f4d7..f28a52bb21646e3b2f67d0c98725ed12d9d035d9 100644
+--- a/docs/subsystems/session.md
++++ b/docs/subsystems/session.md
+@@ -1,3 +1,8 @@
++---
++created: 2026-07-28
++updated: 2026-09-22
++---
++
+ # Sessions
+ 
+ English | [中文](session.zh.md)
+@@ -588,7 +593,10 @@ declare class Session {
+    *   declare how it joins the surface, the sole source of derived model
+    *   history) and
+    *   rejected by the compiler for non-surface types like `turn/start` or
+-   *   `assistant/attempt`. Assistant messages embed their exact provider
++   *   `assistant/attempt`. Non-surface informational events may instead pass
++   *   `{ ignorable: true }` only when omitting them cannot change model history
++   *   or required session state; unknown readers retain them without interpretation.
++   *   Assistant messages embed their exact provider
+    *   stream and cannot cite top-level source events.
+    * @returns the logged event — its assigned `seq`/`time` plus the SNAPSHOT of
+    *   `data` that entered the log, so reading `event.data` back sees the logged
+@@ -611,7 +619,7 @@ declare class Session {
+   append<T extends SessionEventType>(
+     type: T,
+     data: SessionEventMap[T],
+-    ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : []
++    ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : [opts?: { ignorable?: true }]
+     ): SessionEvent<T>;
+   /**
+    * The {@link EpochHeader} in force after the log's last header event — the
+diff --git a/docs/subsystems/session.zh.md b/docs/subsystems/session.zh.md
+index 093fc6d570e93dc5be42d8779fc4d5965085b7e0..4db59fed3ec928f7f7dbc9635e0d23eeb329c481 100644
+--- a/docs/subsystems/session.zh.md
++++ b/docs/subsystems/session.zh.md
+@@ -1,3 +1,8 @@
++---
++created: 2026-07-28
++updated: 2026-09-22
++---
++
+ # 会话
+ 
+ [English](session.md) | 中文
+@@ -590,7 +595,10 @@ declare class Session {
+    *   declare how it joins the surface, the sole source of derived model
+    *   history) and
+    *   rejected by the compiler for non-surface types like `turn/start` or
+-   *   `assistant/attempt`. Assistant messages embed their exact provider
++   *   `assistant/attempt`. Non-surface informational events may instead pass
++   *   `{ ignorable: true }` only when omitting them cannot change model history
++   *   or required session state; unknown readers retain them without interpretation.
++   *   Assistant messages embed their exact provider
+    *   stream and cannot cite top-level source events.
+    * @returns the logged event — its assigned `seq`/`time` plus the SNAPSHOT of
+    *   `data` that entered the log, so reading `event.data` back sees the logged
+@@ -613,7 +621,7 @@ declare class Session {
+   append<T extends SessionEventType>(
+     type: T,
+     data: SessionEventMap[T],
+-    ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : []
++    ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : [opts?: { ignorable?: true }]
+     ): SessionEvent<T>;
+   /**
+    * The {@link EpochHeader} in force after the log's last header event — the
+diff --git a/packages/client/ui-chat/README.i18n.yaml b/packages/client/ui-chat/README.i18n.yaml
+index 0bd7b6012387abe62b44dbdafa069ea7295c4a4b..d141b1ec9a5ea0a0b364d4ca98e5cfc18edea254 100644
+--- a/packages/client/ui-chat/README.i18n.yaml
++++ b/packages/client/ui-chat/README.i18n.yaml
+@@ -2,5 +2,5 @@
+ # side as of the last confirmed-consistent state. Both languages carry equal authority;
+ # after editing either side, bring the other along and re-record with:
+ #   pnpm run verify-translation-pairing --write packages/client/ui-chat/README.md
+-README.md: 14a5260e23640d58c73779cff76bd27853bf4685
+-README.zh.md: 94e1442c5a1afbe3e57df8e2ac2e22181becf253
++README.md: 4e028c81bbd0c96fe4f776e57c6fd39717d936c2
++README.zh.md: dbdefeac9b67767a3ec21456554241281bee491f
+diff --git a/packages/client/ui-chat/README.md b/packages/client/ui-chat/README.md
+index 14a5260e23640d58c73779cff76bd27853bf4685..4e028c81bbd0c96fe4f776e57c6fd39717d936c2 100644
+--- a/packages/client/ui-chat/README.md
++++ b/packages/client/ui-chat/README.md
+@@ -1,4 +1,6 @@
+ ---
++created: 2026-08-23
++updated: 2026-09-22
+ description: "Browser Chat target that renders Session conversation nodes, historical images, actions, localization, and scroll state."
+ kind: "package-reference"
+ ---
+@@ -52,6 +54,10 @@ Generic command rows retain the ordinary command glyph in every lifecycle state;
+ <a id="turn-token-usage"></a>
+ ## Turn token usage
+ 
++Routing details distinguish retaining the current model for a task continuation, retaining it when Jev is unavailable, and selecting the configured fallback.
++
++Completed replies display their actual model from recorded usage attribution in both performance modes. A turn-local `jev-router/routing` decision adds an automatic-selection or fallback label; the expanded usage details explain Jev unavailability, low confidence, or capability constraints. Missing routing evidence adds no inferred mode label.
++
+ A completed Turn shows an expandable usage row only when the loaded window includes `turn/start` and every started model attempt reports safe, exact usage. The row omits unavailable optional buckets. Incomplete or contradictory accounting hides the complete disclosure instead of presenting a partial total.
+ 
+ Settings → General → Performance & usage stores `ui-chat.performanceUsage` as `detailed` (default) or `compact`. Compact shows only available output speed and cache-hit percentage beneath the composer, without interactive statistic dialogs or per-Turn usage. Detailed exposes session statistics and per-Turn token usage. Neither mode shows elapsed time in the completed-turn footer. The preference changes presentation only; accounting and Session events remain intact.
+diff --git a/packages/client/ui-chat/README.zh.md b/packages/client/ui-chat/README.zh.md
+index 94e1442c5a1afbe3e57df8e2ac2e22181becf253..dbdefeac9b67767a3ec21456554241281bee491f 100644
+--- a/packages/client/ui-chat/README.zh.md
++++ b/packages/client/ui-chat/README.zh.md
+@@ -1,4 +1,6 @@
+ ---
++created: 2026-08-23
++updated: 2026-09-22
+ description: "渲染会话对话节点、历史图片、操作、本地化和滚动状态的浏览器 Chat target。"
+ kind: "package-reference"
+ ---
+@@ -52,6 +54,10 @@ Assistant 尝试结束且没有可见消息时，Chat 隐藏已发布的 Node，
+ <a id="turn-token-usage"></a>
+ ## 轮次 token 用量
+ 
++路由详情区分继续当前任务时沿用模型、Jev 不可用时沿用模型，以及使用配置的备用模型。
++
++两种性能模式下，已完成回复均根据已记录的用量归属显示实际模型。本轮的 `jev-router/routing` 决策会添加自动选择或备用模型标记；展开用量详情可查看 Jev 不可用、置信度不足或能力限制的原因。缺少路由记录时，不推断模式标记。
++
+ 只有当已加载窗口包含 `turn/start`，且每次已启动的模型尝试都报告安全、精确的用量时，已完成轮次才显示可展开的用量行。该行会省略不可用的可选用量桶。记账不完整或相互矛盾时，整个详情都不显示，避免把部分总量冒充完整结果。
+ 
+ 设置 → 通用设置 → 性能与用量将 `ui-chat.performanceUsage` 保存为 `detailed`（默认）或 `compact`。简洁模式仅在输入框下方显示可用的输出速度和缓存命中率，不显示统计交互卡片或每轮用量。详细模式提供会话统计和每轮 token 用量。两种模式的已完成轮次页脚均不显示耗时。该偏好仅影响展示，记账和 Session 事件保持完整。
+diff --git a/packages/client/ui-chat/src/client/chat/TurnTailNodeView.tsx b/packages/client/ui-chat/src/client/chat/TurnTailNodeView.tsx
+index a3d58a8cfe48d00b1cd922e315ef6d831ad572b2..29fc713c021c096acb7615fbd95df217bef540b5 100644
+--- a/packages/client/ui-chat/src/client/chat/TurnTailNodeView.tsx
++++ b/packages/client/ui-chat/src/client/chat/TurnTailNodeView.tsx
+@@ -70,8 +70,8 @@ export const TurnTailNodeView = memo(function TurnTailNodeView({
+         branchUnavailable={data.branchUnavailable || hasLaterChatNode}
+         className={css.actions}
+         extraActions={assistantActions}
+-        usageAction={detailed && data.tokenUsage !== undefined
+-          ? <TurnUsagePanel usage={data.tokenUsage} t={t} />
++        usageAction={data.tokenUsage !== undefined
++          ? <TurnUsagePanel usage={data.tokenUsage} routing={data.routing} detailed={detailed} t={t} />
+           : null}
+         t={t}
+       />
+diff --git a/packages/client/ui-chat/src/client/chat/TurnUsagePanel.module.css b/packages/client/ui-chat/src/client/chat/TurnUsagePanel.module.css
+index 58fe2fe556d5fa11e03a93dca3a24919bb22aad4..7701cf3b14daf281d666c055ff13cff17fa6ef07 100644
+--- a/packages/client/ui-chat/src/client/chat/TurnUsagePanel.module.css
++++ b/packages/client/ui-chat/src/client/chat/TurnUsagePanel.module.css
+@@ -3,9 +3,20 @@
+ 
+ .root {
+   display: inline-flex;
++  align-items: center;
++  gap: 8px;
+   min-width: 0;
+ }
+ 
++.route {
++  max-width: 280px;
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++  color: var(--dsw-alias-label-tertiary);
++  font-size: 12px;
++}
++
+ /* Adjacent stat pills (usage then time) rebate part of their combined internal
+    padding so the pair reads as one cluster inside the row's 8px flex gap,
+    while keeping 2px clear between their hover backgrounds. */
+diff --git a/packages/client/ui-chat/src/client/chat/TurnUsagePanel.tsx b/packages/client/ui-chat/src/client/chat/TurnUsagePanel.tsx
+index 460d1092a2f64f0869ff81a649b6401bfd5a6572..0e287176385785b9e34f9009e649a37008587459 100644
+--- a/packages/client/ui-chat/src/client/chat/TurnUsagePanel.tsx
++++ b/packages/client/ui-chat/src/client/chat/TurnUsagePanel.tsx
+@@ -2,7 +2,7 @@
+ 
+ import { createPortal } from 'react-dom'
+ import { IconDatabaseOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
+-import type { TurnTokenUsage } from '../contract/chat-nodes.ts'
++import type { TurnTokenUsage, TurnTailChatData } from '../contract/chat-nodes.ts'
+ import type { ChatViewSlotProps } from '../contract/slots.ts'
+ import { formatCacheHitPercent, formatExactTokens, formatTokens } from './token-format.ts'
+ import { MEASURE_STYLE, useStatDialog } from './stat-dialog.ts'
+@@ -10,6 +10,8 @@ import css from './TurnUsagePanel.module.css'
+ import dialogCss from './stat-dialog.module.css'
+ 
+ export interface TurnUsagePanelProps {
++  routing?: TurnTailChatData['routing']
++  detailed?: boolean
+   usage: TurnTokenUsage
+   /** The owning view's locale seat, passed down as a plain prop. */
+   t: ChatViewSlotProps['t']
+@@ -28,7 +30,7 @@ function formatExactCount(value: number, t: ChatViewSlotProps['t']): string {
+  * @param props - Turn usage buckets and locale seat.
+  * @returns The trigger and, while open, its portaled dialog anchored above the trigger.
+  */
+-export function TurnUsagePanel({ usage, t }: TurnUsagePanelProps) {
++export function TurnUsagePanel({ usage, routing, detailed = true, t }: TurnUsagePanelProps) {
+   const { open, setOpen, rootRef, panelRef, pos } = useStatDialog()
+ 
+   const cacheHit = usage.cacheReadTokens === undefined
+@@ -39,7 +41,12 @@ export function TurnUsagePanel({ usage, t }: TurnUsagePanelProps) {
+ 
+   return (
+     <span ref={rootRef} className={css.root}>
+-      <button
++      {usage.routes !== undefined && <span className={css.route} title={routes}>
++        {usage.routes.map(route => route.model).join(', ')}
++        {routing === undefined ? ''
++          : ` · ${t(routing.reason === 'jev-unavailable' ? 'message.routing.fallback' : 'message.routing.auto')}`}
++      </span>}
++      {detailed && <button
+         type="button"
+         className={css.trigger}
+         aria-haspopup="dialog"
+@@ -48,7 +55,7 @@ export function TurnUsagePanel({ usage, t }: TurnUsagePanelProps) {
+       >
+         <IconDatabaseOutlineRegular />
+         <span className={css.label}>{t('message.turnUsage.consumed', { total })}</span>
+-      </button>
++      </button>}
+       {open && createPortal(
+         <div
+           ref={panelRef}
+@@ -66,6 +73,15 @@ export function TurnUsagePanel({ usage, t }: TurnUsagePanelProps) {
+           </div>
+           <div className={dialogCss.titleRule} aria-hidden />
+           <dl className={dialogCss.details} data-turn-usage-details>
++            {routing !== undefined && <>
++              <dt>{t('message.routing.label')}</dt>
++              <dd>{t(routing.reason === 'jev-unavailable' ? 'message.routing.unavailable'
++                : routing.reason === 'jev-unavailable-retained' ? 'message.routing.retained'
++                  : routing.reason === 'session-sticky' ? 'message.routing.sticky'
++                    : routing.reason === 'uncertain' ? 'message.routing.uncertain'
++                      : routing.reason === 'capability' || routing.reason === 'input-not-classifiable'
++                        ? 'message.routing.capability' : 'message.routing.auto')}</dd>
++            </>}
+             {routes !== '' && (
+               <>
+                 <dt>{t('message.turnUsage.model')}</dt>
+diff --git a/packages/client/ui-chat/src/client/contract/chat-nodes.ts b/packages/client/ui-chat/src/client/contract/chat-nodes.ts
+index cade646b1c67190bb04db7f0d7104a392f49e7c0..1b6b661d1abf379df2867c5006a97fde7a5c469d 100644
+--- a/packages/client/ui-chat/src/client/contract/chat-nodes.ts
++++ b/packages/client/ui-chat/src/client/contract/chat-nodes.ts
+@@ -84,6 +84,8 @@ export interface TurnTokenUsage {
+ 
+ /** Turn-local footer row that owns actions and optional feature contributions. */
+ export interface TurnTailChatData {
++  /** Durable automatic-routing decision for this turn, when Jev selected the route. */
++  readonly routing?: { readonly provider: string; readonly model: string; readonly reason: string }
+   readonly turn: number
+   readonly seq: number
+   readonly time: number
+diff --git a/packages/client/ui-chat/src/client/conversation-nodes/turn-tail.ts b/packages/client/ui-chat/src/client/conversation-nodes/turn-tail.ts
+index 5f5766b149f3305a7bda1d06370d54daea9b7c3e..86a76179a53ffd013ef2bdc5b72bf99804667052 100644
+--- a/packages/client/ui-chat/src/client/conversation-nodes/turn-tail.ts
++++ b/packages/client/ui-chat/src/client/conversation-nodes/turn-tail.ts
+@@ -29,6 +29,22 @@ interface TurnTailState {
+   readonly end?: ConversationMatch
+ }
+ 
++function routingDecision(event: { type: string; data: unknown }): {
++  turn: number
++  provider: string
++  model: string
++  reason: string
++} | undefined {
++  if (event.type !== 'jev-router/routing' || event.data === null || typeof event.data !== 'object') return
++  const data = event.data
++  if (!('status' in data) || data.status !== 'selected'
++    || !('turn' in data) || typeof data.turn !== 'number'
++    || !('provider' in data) || typeof data.provider !== 'string'
++    || !('model' in data) || typeof data.model !== 'string'
++    || !('reason' in data) || typeof data.reason !== 'string') return
++  return { turn: data.turn, provider: data.provider, model: data.model, reason: data.reason }
++}
++
+ function isSessionEvent(event: ConversationMatch['event']): event is SessionEvent {
+   return event.type !== 'assistant/live-chunk'
+ }
+@@ -90,7 +106,9 @@ function tailData(context: ConversationNodeContext<TurnTailState>): TurnTailChat
+   const tokenUsage = context.start?.event.type === 'turn/start'
+     ? deriveTurnTokenUsage(context.matches.map(match => match.event).filter(isSessionEvent))
+     : undefined
++  const routing = context.matches.map(match => routingDecision(match.event)).findLast(value => value !== undefined)
+   return {
++    ...routing === undefined ? {} : { routing },
+     turn: end.event.data.turn,
+     seq: end.event.seq,
+     time: end.event.time,
+@@ -105,6 +123,8 @@ export const turnTailDefinition: ConversationNodeDefinition<TurnTailState> = {
+   kind: 'turn-tail',
+   target: 'chat',
+   match: (event) => {
++    const routing = routingDecision(event)
++    if (routing !== undefined) return { id: String(routing.turn), role: 'update' }
+     if (event.type === 'turn/start') return { id: String(event.data.turn), role: 'start' }
+     if (event.type === 'turn/end') return { id: String(event.data.turn), role: 'update' }
+     if (event.type === 'tool/call' || event.type === 'tool/result') {
+diff --git a/packages/client/ui-chat/src/client/locale.ts b/packages/client/ui-chat/src/client/locale.ts
+index f246af973589df450f3f950feebbbf0e69d1060a..c3e151e0b9f676188fd59415a9a53419d20e96eb 100644
+--- a/packages/client/ui-chat/src/client/locale.ts
++++ b/packages/client/ui-chat/src/client/locale.ts
+@@ -5,6 +5,14 @@ export const NS = 'chat'
+ 
+ /** Simplified Chinese dictionary and key-set source of truth. */
+ export const zh = {
++  'message.routing.label': '模型选择',
++  'message.routing.auto': '自动选择',
++  'message.routing.fallback': '备用模型',
++  'message.routing.unavailable': 'Jev 超时或不可用，已使用配置的备用模型。',
++  'message.routing.retained': 'Jev 超时或不可用，已沿用当前符合能力要求的模型。',
++  'message.routing.sticky': '继续当前任务，沿用已有模型以减少切换。',
++  'message.routing.uncertain': '经济档置信度不足，选择更强模型。',
++  'message.routing.capability': '按输入类型或模型能力选择可用模型。',
+   'message.stepProcess.thinking': '正在分析请求',
+   'message.stepProcess.read': '正在读取文件',
+   'message.stepProcess.search': '正在搜索代码',
+@@ -163,6 +171,14 @@ export type ChatKey = keyof typeof zh
+ 
+ /** English dictionary, checked against the Chinese key set. */
+ export const en = {
++  'message.routing.label': 'Model selection',
++  'message.routing.auto': 'Auto-selected',
++  'message.routing.fallback': 'Fallback model',
++  'message.routing.unavailable': 'Jev timed out or was unavailable; the configured fallback was used.',
++  'message.routing.retained': 'Jev timed out or was unavailable; the eligible current model was retained.',
++  'message.routing.sticky': 'Continuing the current task; retained the existing model to avoid switching.',
++  'message.routing.uncertain': 'Economy confidence was insufficient; the stronger model was selected.',
++  'message.routing.capability': 'Selected an eligible model based on input type or model capabilities.',
+   'message.stepProcess.thinking': 'Analyzing the request',
+   'message.stepProcess.read': 'Reading files',
+   'message.stepProcess.search': 'Searching code',
+diff --git a/packages/client/ui-chat/tests/turn-usage-panel.client.spec.tsx b/packages/client/ui-chat/tests/turn-usage-panel.client.spec.tsx
+index 107ca55f9ea6e709ac72fcfae110bc921b074f65..3e0e999f6d623f26fad8431721cee4bf875c6d0b 100644
+--- a/packages/client/ui-chat/tests/turn-usage-panel.client.spec.tsx
++++ b/packages/client/ui-chat/tests/turn-usage-panel.client.spec.tsx
+@@ -13,6 +13,36 @@ const t = makeTranslate(en, commonEn)
+ afterEach(cleanup)
+ 
+ describe('TurnUsagePanel', () => {
++  it.each([
++    ['session-sticky', 'Continuing the current task; retained the existing model to avoid switching.'],
++    ['jev-unavailable-retained', 'Jev timed out or was unavailable; the eligible current model was retained.'],
++  ])('explains retained routing for %s', (reason, explanation) => {
++    const usage = { uncachedInputTokens: 10, outputTokens: 2, totalTokens: 12,
++      routes: [{ provider: 'openrouter', model: 'test-model' }] }
++    const view = render(<TurnUsagePanel usage={usage}
++      routing={{ provider: 'openrouter', model: 'test-model', reason }} t={t} />)
++    expect(view.queryByText('test-model · Fallback model')).toBeNull()
++    fireEvent.click(view.getByRole('button'))
++    expect(view.getByText(explanation)).toBeTruthy()
++  })
++  it('shows the actual automatic route even when detailed accounting is hidden', () => {
++    const usage = { uncachedInputTokens: 10, outputTokens: 2, totalTokens: 12,
++      routes: [{ provider: 'openrouter', model: 'google/gemini-3.1-flash-lite' }] }
++    const view = render(<TurnUsagePanel usage={usage} detailed={false}
++      routing={{ provider: 'openrouter', model: 'google/gemini-3.1-flash-lite', reason: 'jev' }} t={t} />)
++    expect(view.getByText('google/gemini-3.1-flash-lite · Auto-selected')).toBeTruthy()
++    expect(view.queryByRole('button')).toBeNull()
++  })
++
++  it('explains a Jev fallback beside the actual executed model', () => {
++    const usage = { uncachedInputTokens: 10, outputTokens: 2, totalTokens: 12,
++      routes: [{ provider: 'openrouter', model: 'anthropic/claude-sonnet-5' }] }
++    const view = render(<TurnUsagePanel usage={usage}
++      routing={{ provider: 'openrouter', model: 'anthropic/claude-sonnet-5', reason: 'jev-unavailable' }} t={t} />)
++    expect(view.getByText('anthropic/claude-sonnet-5 · Fallback model')).toBeTruthy()
++    fireEvent.click(view.getByRole('button'))
++    expect(view.getByText('Jev timed out or was unavailable; the configured fallback was used.')).toBeTruthy()
++  })
+   it('shows an icon-and-total pill and opens the usage dialog on click', () => {
+     const usage: TurnTokenUsage = {
+       uncachedInputTokens: 5_060,
+diff --git a/packages/client/ui-model-selection/README.i18n.yaml b/packages/client/ui-model-selection/README.i18n.yaml
+index 10481b46f896706773961edfbc4a6697757a40cf..e34beb2f4d227671f6071dd9fdb20fe6b57d69f8 100644
+--- a/packages/client/ui-model-selection/README.i18n.yaml
++++ b/packages/client/ui-model-selection/README.i18n.yaml
+@@ -2,5 +2,5 @@
+ # side as of the last confirmed-consistent state. Both languages carry equal authority;
+ # after editing either side, bring the other along and re-record with:
+ #   pnpm run verify-translation-pairing --write packages/client/ui-model-selection/README.md
+-README.md: 37253cf04242275f22d646da0e65cfd44f4fefbf
+-README.zh.md: 4e339e6a6c6db8c3125e6ccc19c0fc3af9947f88
++README.md: b4081bca082075803a8148a5cad3c8dcf2324fbf
++README.zh.md: 0236c54e828b7ed6e0eda1292e84aaba5a51a332
+diff --git a/packages/client/ui-model-selection/README.md b/packages/client/ui-model-selection/README.md
+index 37253cf04242275f22d646da0e65cfd44f4fefbf..b4081bca082075803a8148a5cad3c8dcf2324fbf 100644
+--- a/packages/client/ui-model-selection/README.md
++++ b/packages/client/ui-model-selection/README.md
+@@ -1,4 +1,6 @@
+ ---
++created: 2026-08-13
++updated: 2026-09-22
+ description: "Model selection for the Web GUI: the /model popup and the composer model seat over one per-session provider-grouped directory; for users and maintainers of model routing."
+ kind: "package-reference"
+ ---
+@@ -25,10 +27,14 @@ The Web GUI lets users switch the model and reasoning effort for an existing ses
+ <a id="use-this-package"></a>
+ ## Use this package
+ 
++The selector distinguishes a configured fallback from retaining the current model when Jev is unavailable.
++
+ Mount this plugin alongside `ui-conversation` and the commands package; the composer then shows the model seat next to the pending indicator, and `/model` opens the same directory as a popup. While the seat's menu is open, `↑`/`↓` move focus across the rows of the shown pane, Tab settles the focused row, and Escape and `Shift+Tab` leave a drilled pane first and otherwise close back to the trigger. Drilling lands on the row of the value in use, and going back lands on the cell that opened the pane left. Both surfaces show the host-reported current selection when the exact provider/model pair remains in the advertised groups; a missing catalog row leaves the routable selection intact while the trigger prompts `Select model`.
+ 
+ ### Model and effort
+ 
++When `dsh-jev-router` advertises its Auto route and `jevRouting` projection, the directory keeps `Auto · Jev` as the selected mode independently of the last executed model. Auto appears first and selects once per user turn; choosing a concrete model records manual intent for this session. The composer shows selection progress or fallback status. Sessions without an explicit choice start in Auto while the plugin is active.
++
+ Models stay grouped by provider. The composer menu shows model and effort names only. The `/model` popup shows provider names and catalog descriptions; it localizes the two built-in DeepSeek descriptions and leaves external provider descriptions verbatim. The popup applies the selected model's default effort; the composer can then choose any advertised effort. An adapter without reasoning metadata leaves the Effort row absent; there is no arbitrary effort input.
+ 
+ The composer replaces the model and effort text with the Models icon when the expanded controls cannot share one line, and restores the text when space permits. The full selection remains available in the trigger's accessible name, tooltip, and menu.
+diff --git a/packages/client/ui-model-selection/README.zh.md b/packages/client/ui-model-selection/README.zh.md
+index 4e339e6a6c6db8c3125e6ccc19c0fc3af9947f88..0236c54e828b7ed6e0eda1292e84aaba5a51a332 100644
+--- a/packages/client/ui-model-selection/README.zh.md
++++ b/packages/client/ui-model-selection/README.zh.md
+@@ -1,4 +1,6 @@
+ ---
++created: 2026-08-13
++updated: 2026-09-22
+ description: "Web GUI 的模型选择：/model 弹窗与 composer 模型位共用一份按提供方分组的会话级目录；供模型路由的用户与维护者阅读。"
+ kind: "package-reference"
+ ---
+@@ -25,10 +27,14 @@ Web GUI 允许用户通过 `/model` 弹窗或 composer 模型控件切换既有
+ <a id="use-this-package"></a>
+ ## 使用本包
+ 
++模型选择器区分使用配置的备用模型与 Jev 不可用时沿用当前模型。
++
+ 与 `ui-conversation` 及命令包一起挂载本插件；composer 随即在待处理指示器旁显示模型位，`/model` 则以弹窗打开同一份目录。模型位菜单打开期间，`↑`／`↓` 在所显示面板的行间移动焦点，`Tab` 选定聚焦行，Escape 与 `Shift+Tab` 先退出已下钻的面板，否则关闭并回到触发器。下钻落在正在使用的那一行，返回则落在打开该面板的格子上。当确切提供方／模型对仍在已公布分组中时，两个界面都显示 Host 报告的当前选择；目录行缺席时，可路由的选择保持不变，触发器提示 `Select model`。
+ 
+ ### 模型与推理强度
+ 
++当 `dsh-jev-router` 提供 Auto 路由和 `jevRouting` 投影时，目录将 `Auto · Jev` 作为所选模式，与上次实际执行模型分开显示。Auto 位于首项，每个用户回合选择一次；选择具体模型会记录本会话的手动选择意图。输入框显示选模进度或备用模型状态。插件启用时，没有明确选择的会话默认使用 Auto。
++
+ 模型按提供方分组。composer 菜单只显示模型与推理强度名称。`/model` 弹窗显示提供方名称与目录说明；其中两个内置 DeepSeek 模型的说明使用当前语言，外部提供方说明保持原文。弹窗应用所选模型的默认推理强度；composer 随后可以选择任一已公布的推理强度。适配器没有推理元数据时不显示 Effort 行；不存在任意推理强度输入。
+ 
+ 展开的控件无法排在同一行时，composer 将模型与推理强度文字替换为模型图标；空间足够后恢复文字。触发器的无障碍名称、提示和菜单仍提供完整选择。
+diff --git a/packages/client/ui-model-selection/src/client/ModelSelect.module.css b/packages/client/ui-model-selection/src/client/ModelSelect.module.css
+index b3a60fb6ece3a56754509e83ea7e750a87641715..6ffb632b9bc815fcfa1021d88c8bc541760401fb 100644
+--- a/packages/client/ui-model-selection/src/client/ModelSelect.module.css
++++ b/packages/client/ui-model-selection/src/client/ModelSelect.module.css
+@@ -220,6 +220,14 @@
+   min-width: 0;
+ }
+ 
++.optionDescription {
++  margin-top: 3px;
++  color: var(--dsw-alias-label-tertiary);
++  font-size: 11px;
++  line-height: 16px;
++  white-space: normal;
++}
++
+ .modelName {
+   overflow: hidden;
+   color: inherit;
+diff --git a/packages/client/ui-model-selection/src/client/ModelSelect.tsx b/packages/client/ui-model-selection/src/client/ModelSelect.tsx
+index b9c899356313a5a8ca6c282fe01533de9c04302d..c338e3fa25960d497f3fafc1bf8f8a64122fc790 100644
+--- a/packages/client/ui-model-selection/src/client/ModelSelect.tsx
++++ b/packages/client/ui-model-selection/src/client/ModelSelect.tsx
+@@ -111,6 +111,12 @@ export function ModelSelect(
+       })),
+     ], [reasoning, t])
+   const busy = state.status === 'selecting'
++  const automatic = state.current?.provider === 'jev-router' && state.current.model === 'auto'
++  const routingStatus = !automatic ? undefined
++    : state.routing?.status === 'selecting' ? t('auto.selecting')
++      : state.routing?.status === 'failed' ? t('auto.failed')
++        : state.routing?.reason === 'jev-unavailable' ? t('auto.fallback')
++          : state.routing?.reason === 'jev-unavailable-retained' ? t('auto.retained') : undefined
+ 
+   const reload = (): void => {
+     lastActionRef.current = 'load'
+@@ -190,7 +196,7 @@ export function ModelSelect(
+   if (!available) return null
+ 
+   const show = (): void => {
+-    setPane('root')
++    setPane(automatic ? 'model' : 'root')
+     setOpen(true)
+     reload()
+   }
+@@ -358,6 +364,7 @@ export function ModelSelect(
+         <IconDataOutlineRegular className={css.triggerIcon} size={16} />
+         <span className={css.triggerLabel}>{modelLabel}</span>
+         {effortLabel !== undefined && <span className={css.triggerEffort}>{effortLabel}</span>}
++        {routingStatus !== undefined && <span className={css.triggerEffort} role="status">{routingStatus}</span>}
+         <IconChevronDownOutlineRegular className={clsx(css.chevron, open && css.chevronOpen)} />
+       </button>
+ 
+@@ -413,7 +420,9 @@ export function ModelSelect(
+                   const headingId = `${id}-${group.id}`
+                   return (
+                     <section role="group" aria-labelledby={headingId} className={css.group} key={group.id}>
+-                      <div className={css.groupTitle} id={headingId}>{group.name}</div>
++                      <div className={css.groupTitle} id={headingId}>{group.id === 'jev-router'
++                        ? 'Auto' : state.groups.some(item => item.id === 'jev-router')
++                          ? `${t('auto.manual')} · ${group.name}` : group.name}</div>
+                       {group.models.map((model) => {
+                         const selected = state.current?.provider === group.id && state.current.model === model.id
+                         return (
+@@ -430,6 +439,7 @@ export function ModelSelect(
+                           >
+                             <span className={css.optionCopy}>
+                               <span className={css.modelName}>{model.name}</span>
++                              {group.id === 'jev-router' && <span className={css.optionDescription}>{t('auto.description')}</span>}
+                             </span>
+                             <span className={css.check}>
+                               {selected ? <IconCheckOutlineRegular /> : null}
+diff --git a/packages/client/ui-model-selection/src/client/directory.ts b/packages/client/ui-model-selection/src/client/directory.ts
+index b27811f5018884eaf91adf4b930b92c6d01c6822..0e186d0ab27bc8eae66049984fea0d517d5115b0 100644
+--- a/packages/client/ui-model-selection/src/client/directory.ts
++++ b/packages/client/ui-model-selection/src/client/directory.ts
+@@ -13,8 +13,29 @@ import type { ObservableSnapshot, SnapshotStore } from '@deepseek-ai/dsh-client-
+ import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+ import type { ModelCatalogDirectory } from './catalog.ts'
+ 
++/** Optional Jev routing projection; absent when the routing plugin is not installed. */
++export interface RoutingDisplay {
++  mode: 'auto' | 'manual'
++  status: string
++  provider: string
++  model: string
++  reason: string
++}
++
++function routingDisplay(value: unknown): RoutingDisplay | undefined {
++  if (value === null || typeof value !== 'object') return
++  if (!('mode' in value) || (value.mode !== 'auto' && value.mode !== 'manual')) return
++  if (!('status' in value) || typeof value.status !== 'string'
++    || !('provider' in value) || typeof value.provider !== 'string'
++    || !('model' in value) || typeof value.model !== 'string'
++    || !('reason' in value) || typeof value.reason !== 'string') return
++  return { mode: value.mode, status: value.status, provider: value.provider, model: value.model, reason: value.reason }
++}
++
+ /** Directory snapshot both entries render from. */
+ export interface ModelDirectoryState {
++  /** Routing intent and last decision remain distinct from the executed model. */
++  routing?: RoutingDisplay
+   /** Effective selection: durable next-request projection, then Host default. */
+   current: ModelSelection | null
+   /**
+@@ -48,6 +69,7 @@ export class ModelDirectory {
+   private resolved = false
+   private readonly unsubscribeCatalog: () => void
+   private readonly unsubscribeSelection: () => void
++  private readonly unsubscribeRouting: (() => void) | undefined
+ 
+   /**
+    * @param sessions - the session wire face (captured from the plugin's root connection).
+@@ -62,9 +84,11 @@ export class ModelDirectory {
+     private readonly available: () => boolean,
+     private readonly catalog: ModelCatalogDirectory,
+     private readonly projected: ObservableSnapshot<unknown>,
++    private readonly routingProjected?: ObservableSnapshot<unknown>,
+   ) {
+     this.unsubscribeCatalog = catalog.store.subscribe(() => { this.syncInputs() })
+     this.unsubscribeSelection = projected.subscribe(() => { this.syncInputs() })
++    this.unsubscribeRouting = routingProjected?.subscribe(() => { this.syncInputs() })
+     this.syncInputs()
+   }
+ 
+@@ -130,6 +154,7 @@ export class ModelDirectory {
+   dispose(): void {
+     this.disposed = true
+     this.unsubscribeSelection()
++    this.unsubscribeRouting?.()
+     this.unsubscribeCatalog()
+   }
+ 
+@@ -163,12 +188,18 @@ export class ModelDirectory {
+       })
+       return
+     }
+-    const current = projected.next ?? catalog.value.default
++    const routing = routingDisplay(this.routingProjected?.getSnapshot())
++    const automatic = catalog.value.groups.find(group => group.id === 'jev-router')
++    const current = automatic !== undefined && routing?.mode === 'auto'
++      ? { provider: 'jev-router', model: 'auto' }
++      : projected.next ?? catalog.value.default
+     this.resolved = true
+     this.store.set({
+       current,
++      ...routing === undefined ? {} : { routing },
+       routable: catalog.value.routableProviders.includes(current.provider),
+-      groups: catalog.value.groups,
++      groups: [...catalog.value.groups].sort((left, right) =>
++        Number(right.id === 'jev-router') - Number(left.id === 'jev-router')),
+       failures: catalog.value.failures,
+       status: this.store.getSnapshot().status === 'selecting'
+         ? 'selecting'
+diff --git a/packages/client/ui-model-selection/src/client/locales.ts b/packages/client/ui-model-selection/src/client/locales.ts
+index 2e573796ea5c4e89cb45eea08b9f144f6149a3c2..410408f267c273d1738d55ac655470fb782f3604 100644
+--- a/packages/client/ui-model-selection/src/client/locales.ts
++++ b/packages/client/ui-model-selection/src/client/locales.ts
+@@ -10,6 +10,12 @@
+ 
+ /** Simplified Chinese dictionary (the key-set source of truth). */
+ export const zh = {
++  'auto.description': '每个用户回合自动选择，平衡成本与质量',
++  'auto.selecting': '正在选择模型…',
++  'auto.fallback': '使用备用模型',
++  'auto.retained': '沿用当前模型',
++  'auto.failed': '选模失败',
++  'auto.manual': '手动选择',
+   'command.label': '模型',
+   'command.description': '选择本会话使用的模型',
+   'option.loadError': '目录加载失败：{message}',
+@@ -39,6 +45,12 @@ export type ModelKey = keyof typeof zh
+ 
+ /** English dictionary, checked complete against the zh key set. */
+ export const en = {
++  'auto.description': 'Choose once per user turn, balancing cost and quality',
++  'auto.selecting': 'Choosing a model…',
++  'auto.fallback': 'Using fallback model',
++  'auto.retained': 'Keeping current model',
++  'auto.failed': 'Model selection failed',
++  'auto.manual': 'Manual selection',
+   'command.label': 'Model',
+   'command.description': 'Select the model for this conversation',
+   'option.loadError': 'Catalog failed to load: {message}',
+diff --git a/packages/client/ui-model-selection/src/client/service.ts b/packages/client/ui-model-selection/src/client/service.ts
+index d92c2c08b3809c83642ad8d060fd371f68cf2d69..0d05ab5814ed0411e5ce849dc157b032e6e9a192 100644
+--- a/packages/client/ui-model-selection/src/client/service.ts
++++ b/packages/client/ui-model-selection/src/client/service.ts
+@@ -81,6 +81,7 @@ export class ModelDirectoryResolver extends Service {
+       () => sessions.subagentAddress(sessionId) === undefined,
+       this.catalog,
+       binding.session.projections.faceOf('modelSelection'),
++      binding.session.projections.faceOf('jevRouting'),
+     )
+     live.directories.set(binding, directory)
+     // The composer cannot read this plugin (the dependency runs one way), so
+diff --git a/packages/client/ui-model-selection/tests/model-select.client.spec.tsx b/packages/client/ui-model-selection/tests/model-select.client.spec.tsx
+index 4a5ee43b9112c4997cd5dffee4e082c99df90218..9cad96d20cb171b6a92621b680d6995d68543181 100644
+--- a/packages/client/ui-model-selection/tests/model-select.client.spec.tsx
++++ b/packages/client/ui-model-selection/tests/model-select.client.spec.tsx
+@@ -55,6 +55,28 @@ function state(overrides: Partial<ModelDirectoryState> = {}): ModelDirectoryStat
+ afterEach(cleanup)
+ 
+ describe('ModelSelect reasoning effort', () => {
++  it('keeps Auto visible while choosing and lets a concrete model replace it', async () => {
++    const groups = [
++      { id: 'jev-router', name: 'Auto', models: [{ id: 'auto', name: 'Auto · Jev' }] },
++      ...state().groups,
++    ]
++    const directory = createSnapshotStore<ModelDirectoryState>(state({
++      current: { provider: 'jev-router', model: 'auto' }, groups,
++      routing: { mode: 'auto', status: 'selecting', provider: '', model: '', reason: '' },
++    }))
++    const select = vi.fn(async (selection: ModelSelection) => {
++      directory.set(state({ current: selection, groups }))
++      return { ok: true as const, value: undefined }
++    })
++    render(<ModelSelect locked={false} available directory={directory} load={vi.fn()} select={select} t={t} />)
++    const trigger = screen.getByRole('button', { name: '选择模型，当前 Auto · Jev' })
++    expect(screen.getByRole('status').textContent).toBe('正在选择模型…')
++    fireEvent.click(trigger)
++    expect(screen.getByText('每个用户回合自动选择，平衡成本与质量')).toBeTruthy()
++    fireEvent.click(screen.getByRole('menuitemradio', { name: 'DeepSeek-V4-Flash' }))
++    await waitFor(() => { expect(select).toHaveBeenCalledWith({ provider: 'deepseek-official', model: 'deepseek-v4-flash' }) })
++    expect(screen.getByRole('button', { name: /选择模型，当前 DeepSeek-V4-Flash/ })).toBeTruthy()
++  })
+   it('renders effort names without descriptions and submits the effort as part of the session selection', async () => {
+     const directory = createSnapshotStore<ModelDirectoryState>(state())
+     const select = vi.fn(async (selection: ModelSelection) => {
+diff --git a/packages/core/session/README.i18n.yaml b/packages/core/session/README.i18n.yaml
+index ae3352f3f1e4fee75eafefbdf7f68089fe5fedc7..98abf83d83922ffe99ee16947ff11af07ddb7b3d 100644
+--- a/packages/core/session/README.i18n.yaml
++++ b/packages/core/session/README.i18n.yaml
+@@ -2,5 +2,5 @@
+ # side as of the last confirmed-consistent state. Both languages carry equal authority;
+ # after editing either side, bring the other along and re-record with:
+ #   pnpm run verify-translation-pairing --write packages/core/session/README.md
+-README.md: 06c4f1806995c2fdff78515f88a60c6e449e3a26
+-README.zh.md: c52eee96af19bcd6f5a76f950026d2c191002732
++README.md: 68c9fad542bd2173151b4ae4094584a88a06da7e
++README.zh.md: 0306eeee2a1b7af9b634ad8aa3b26e3b5cdfc9f4
+diff --git a/packages/core/session/README.md b/packages/core/session/README.md
+index 06c4f1806995c2fdff78515f88a60c6e449e3a26..68c9fad542bd2173151b4ae4094584a88a06da7e 100644
+--- a/packages/core/session/README.md
++++ b/packages/core/session/README.md
+@@ -1,4 +1,6 @@
+ ---
++created: 2026-06-20
++updated: 2026-09-22
+ description: "The event-sourced session log and in-memory store for users and maintainers building, inspecting, or extending the durable record behind every agent interaction."
+ kind: "package-reference"
+ ---
+@@ -47,7 +49,9 @@ session.append('user/message', { role: 'user', content: [{ type: 'text', text: '
+ session.deriveMessages()         // the derived model history
+ ```
+ 
+-Surface events (`system/message`, `developer/message`, `user/message`, `assistant/message`, `tool/result`) require `surfaceOp` in both typed events and append input. A replacement uses exactly `{ op: 'replace', startSeq, endSeq }`, with inclusive `SessionSeq` endpoints in current surface order. An Assistant message embeds its exact compact provider stream and forbids `sourceEventSeqs`. Known log-only events forbid both metadata fields and never produce a message.
++Surface events (`system/message`, Informational log-only events may pass `{ ignorable: true }` to `append`; unknown readers retain their records without interpreting them. Use this only when omitting the event cannot change model history or required session state. The default remains required-on-read.
++
++`developer/message`, `user/message`, `assistant/message`, `tool/result`) require `surfaceOp` in both typed events and append input. A replacement uses exactly `{ op: 'replace', startSeq, endSeq }`, with inclusive `SessionSeq` endpoints in current surface order. An Assistant message embeds its exact compact provider stream and forbids `sourceEventSeqs`. Known log-only events forbid both metadata fields and never produce a message.
+ 
+ `developer/message` stores tool-addition names and a `headerSeq` reference to an earlier `request/header`. The reference is required exactly when additions are present, and each name must identify exactly one complete schema in that header. Removals name the tool without a header reference. Historical headers remain available across restart, fork, and surface replacement; the current registry and latest header do not select an earlier addition's definition. `sourceEventSeqs` continues to describe derivation and replaced nodes.
+ 
+diff --git a/packages/core/session/README.zh.md b/packages/core/session/README.zh.md
+index c52eee96af19bcd6f5a76f950026d2c191002732..0306eeee2a1b7af9b634ad8aa3b26e3b5cdfc9f4 100644
+--- a/packages/core/session/README.zh.md
++++ b/packages/core/session/README.zh.md
+@@ -1,4 +1,6 @@
+ ---
++created: 2026-07-26
++updated: 2026-09-22
+ description: "面向用户与维护者的事件溯源会话日志与内存存储说明，用于构建、检查或扩展每个 agent（智能体）交互背后的持久记录。"
+ kind: "package-reference"
+ ---
+@@ -47,7 +49,9 @@ session.append('user/message', { role: 'user', content: [{ type: 'text', text: '
+ session.deriveMessages()         // the derived model history
+ ```
+ 
+-表层事件（`system/message`、`developer/message`、`user/message`、`assistant/message`、`tool/result`）在类型化事件与追加输入中都必须带有 `surfaceOp`。替换操作仅接受 `{ op: 'replace', startSeq, endSeq }`，端点为包含边界的 `SessionSeq`，按当前 surface 顺序解释。assistant 消息会嵌入精确、紧凑的提供方流，并禁止 `sourceEventSeqs`。已知仅日志事件禁止这两个元数据字段，且从不产生消息。
++表层事件（`system/message`、仅用于提示信息的非消息事件可向 `append` 传入 `{ ignorable: true }`；不认识该事件的读取方会保留原始记录，不解释其内容。只有省略该事件不会影响模型历史或必要会话状态时才能使用此标记。默认仍要求读取方认识事件。
++
++`developer/message`、`user/message`、`assistant/message`、`tool/result`）在类型化事件与追加输入中都必须带有 `surfaceOp`。替换操作仅接受 `{ op: 'replace', startSeq, endSeq }`，端点为包含边界的 `SessionSeq`，按当前 surface 顺序解释。assistant 消息会嵌入精确、紧凑的提供方流，并禁止 `sourceEventSeqs`。已知仅日志事件禁止这两个元数据字段，且从不产生消息。
+ 
+ `developer/message` 存储工具添加名称，以及指向更早 `request/header` 的 `headerSeq` 引用。仅在存在添加块时必须携带该引用，每个名称必须在所引用的请求头中恰好对应一个完整模式。移除块仅记录工具名称，不携带请求头引用。重启、fork 和 surface 替换保留历史请求头；较早添加的定义不由当前注册表或最新请求头决定。`sourceEventSeqs` 继续描述派生来源及被替换节点。
+ 
+diff --git a/packages/core/session/src/index.ts b/packages/core/session/src/index.ts
+index 02922a17394a655a0ab3ae992bd0353fb6797d8b..af89c699ccfd4a160d365bc8105ec8e3d403c014 100644
+--- a/packages/core/session/src/index.ts
++++ b/packages/core/session/src/index.ts
+@@ -697,7 +697,10 @@ export class Session {
+    *   declare how it joins the surface, the sole source of derived model
+    *   history) and
+    *   rejected by the compiler for non-surface types like `turn/start` or
+-   *   `assistant/attempt`. Assistant messages embed their exact provider
++   *   `assistant/attempt`. Non-surface informational events may instead pass
++   *   `{ ignorable: true }` only when omitting them cannot change model history
++   *   or required session state; unknown readers retain them without interpretation.
++   *   Assistant messages embed their exact provider
+    *   stream and cannot cite top-level source events.
+    * @returns the logged event — its assigned `seq`/`time` plus the SNAPSHOT of
+    *   `data` that entered the log, so reading `event.data` back sees the logged
+@@ -720,10 +723,15 @@ export class Session {
+   append<T extends SessionEventType>(
+     type: T,
+     data: SessionEventMap[T],
+-    ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : []
++    ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : [opts?: { ignorable?: true }]
+   ): SessionEvent<T> {
+-    const surfaceOpts: SurfaceIntent | undefined = opts[0]
++    const surfaceOpts: (Partial<SurfaceIntent> & { ignorable?: true }) | undefined = opts[0]
++    const ignorable: unknown = surfaceOpts?.ignorable
++    if (ignorable !== undefined && ignorable !== true) {
++      throw new Error('session event ignorable must be true when present')
++    }
+     const surfaceMetadata = {
++      ...ignorable === undefined ? {} : { ignorable },
+       ...surfaceOpts?.sourceEventSeqs === undefined ? {} : { sourceEventSeqs: surfaceOpts.sourceEventSeqs },
+       ...surfaceOpts?.surfaceOp === undefined ? {} : { surfaceOp: surfaceOpts.surfaceOp },
+     }
+diff --git a/packages/extensions/tool-cordis/src/api-catalog.ts b/packages/extensions/tool-cordis/src/api-catalog.ts
+index 5560861b6cc638992a3141c1713a011cdbc446f5..ccf0bb29b4f892652f3a93a63bc8de7fd34f8be9 100644
+--- a/packages/extensions/tool-cordis/src/api-catalog.ts
++++ b/packages/extensions/tool-cordis/src/api-catalog.ts
+@@ -6029,7 +6029,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
+   },
+   {
+     name: 'Session',
+-    declaration: 'export class Session {\n    get surface(): SessionSurface;\n    readonly header: SessionHeader;\n    readonly inheritedEventCount: SessionLogOffset;\n    get id(): SessionId;\n    readonly firstLiveSeq: SessionLogOffset;\n    readonly firstLifecycleSeq: SessionLogOffset;\n    static create(id: SessionId, seed?: readonly SessionEvent[], header?: SessionHeader, inheritedEventCount?: SessionLogOffset, projections?: readonly SessionMessageProjection[]): Session;\n    static fromRestore(id: SessionId, seed: readonly SessionEvent[], header: SessionHeader, inheritedEventCount: SessionLogOffset, eventState: SessionSeedEventState, projections?: readonly SessionMessageProjection[]): Session;\n    eventAt(seq: SessionSeq): SessionEvent | undefined;\n    snapshotEvents(fromSeq: SessionLogOffset = SessionLogOffset(0), toSeqExclusive: SessionLogOffset = this.seq): readonly SessionEvent[];\n    ownEvents(): readonly SessionEvent[];\n    isOwnSeq(seq: SessionSeq): boolean;\n    get seq(): SessionLogOffset;\n    append<T extends SessionEventType>(type: T, data: SessionEventMap[T], ...opts: T extends SurfaceEventType ? [\n        opts: SurfaceIntent<T>\n    ] : [\n    ]): SessionEvent<T>;\n    requestHeader(): EpochHeader | undefined;\n    requestContext(): RequestContext | undefined;\n    deriveMessages(): Message[];\n    deriveEventMessage(event: SessionEvent): Message | null;\n}',
++    declaration: 'export class Session {\n    get surface(): SessionSurface;\n    readonly header: SessionHeader;\n    readonly inheritedEventCount: SessionLogOffset;\n    get id(): SessionId;\n    readonly firstLiveSeq: SessionLogOffset;\n    readonly firstLifecycleSeq: SessionLogOffset;\n    static create(id: SessionId, seed?: readonly SessionEvent[], header?: SessionHeader, inheritedEventCount?: SessionLogOffset, projections?: readonly SessionMessageProjection[]): Session;\n    static fromRestore(id: SessionId, seed: readonly SessionEvent[], header: SessionHeader, inheritedEventCount: SessionLogOffset, eventState: SessionSeedEventState, projections?: readonly SessionMessageProjection[]): Session;\n    eventAt(seq: SessionSeq): SessionEvent | undefined;\n    snapshotEvents(fromSeq: SessionLogOffset = SessionLogOffset(0), toSeqExclusive: SessionLogOffset = this.seq): readonly SessionEvent[];\n    ownEvents(): readonly SessionEvent[];\n    isOwnSeq(seq: SessionSeq): boolean;\n    get seq(): SessionLogOffset;\n    append<T extends SessionEventType>(type: T, data: SessionEventMap[T], ...opts: T extends SurfaceEventType ? [\n        opts: SurfaceIntent<T>\n    ] : [\n        opts?: {\n            ignorable?: true;\n        }\n    ]): SessionEvent<T>;\n    requestHeader(): EpochHeader | undefined;\n    requestContext(): RequestContext | undefined;\n    deriveMessages(): Message[];\n    deriveEventMessage(event: SessionEvent): Message | null;\n}',
+   },
+   {
+     name: 'SessionAccess',
+diff --git a/packages/llm/llm-pi-ai/README.i18n.yaml b/packages/llm/llm-pi-ai/README.i18n.yaml
+index c5fbc218d7cb4f020d91832ca2e844357603211f..c7d67f357abccbcc1369b5a5ac924074bd7f257e 100644
+--- a/packages/llm/llm-pi-ai/README.i18n.yaml
++++ b/packages/llm/llm-pi-ai/README.i18n.yaml
+@@ -2,5 +2,5 @@
+ # side as of the last confirmed-consistent state. Both languages carry equal authority;
+ # after editing either side, bring the other along and re-record with:
+ #   pnpm run verify-translation-pairing --write packages/llm/llm-pi-ai/README.md
+-README.md: 7b1708b957202369382d8a93b2bbcefd31565f67
+-README.zh.md: ed780ad235b1d8df2b821be6a0595ecd8b8e951b
++README.md: d45b4a132c4df493cf806ae86fc83e124f8f5804
++README.zh.md: efb567493124d941b8ce7f788e9f17a51540373f
+diff --git a/packages/llm/llm-pi-ai/README.md b/packages/llm/llm-pi-ai/README.md
+index 7b1708b957202369382d8a93b2bbcefd31565f67..d45b4a132c4df493cf806ae86fc83e124f8f5804 100644
+--- a/packages/llm/llm-pi-ai/README.md
++++ b/packages/llm/llm-pi-ai/README.md
+@@ -1,4 +1,6 @@
+ ---
++created: 2026-06-20
++updated: 2026-09-22
+ description: "The pi-ai-backed multi-provider adapter for users and maintainers routing the harness LLM service through pi-ai catalogs and hand-declared gateways."
+ kind: "package-reference"
+ ---
+@@ -25,6 +27,8 @@ English | [中文](README.zh.md)
+ <a id="use-this-package"></a>
+ ## Use this package
+ 
++Requests to the official HTTPS OpenRouter origin send the Harness Session ID as `x-session-id`. The per-session value overrides case-insensitive profile-header collisions; custom gateway origins receive no automatic OpenRouter header. Affinity does not guarantee a prompt-cache hit or share caches across models.
++
+ Mount this plugin when a composition routes model requests through pi-ai's provider catalogs or through gateways that pi-ai's installed catalog does not describe. The `providers` dictionary is the whole configuration surface: each key is the provider route name a request selects with `GenerateOptions.provider`.
+ 
+ The adapter accepts the LLM service's [request-only user inputs](../llm/README.md#use-this-package) alongside durable history. User identity and attribution do not enter pi-ai content; assistant replay metadata and tool-call correlation remain attached to durable messages.
+diff --git a/packages/llm/llm-pi-ai/README.zh.md b/packages/llm/llm-pi-ai/README.zh.md
+index ed780ad235b1d8df2b821be6a0595ecd8b8e951b..efb567493124d941b8ce7f788e9f17a51540373f 100644
+--- a/packages/llm/llm-pi-ai/README.zh.md
++++ b/packages/llm/llm-pi-ai/README.zh.md
+@@ -1,4 +1,6 @@
+ ---
++created: 2026-07-26
++updated: 2026-09-22
+ description: "面向用户与维护者的 pi-ai 多提供方适配器说明：通过 pi-ai 目录与手工声明网关路由 harness LLM（大语言模型）服务。"
+ kind: "package-reference"
+ ---
+@@ -25,6 +27,8 @@ kind: "package-reference"
+ <a id="use-this-package"></a>
+ ## 使用本包
+ 
++发往官方 HTTPS OpenRouter 源的请求将 Harness Session ID 作为 `x-session-id` 发送。逐会话值会覆盖配置中大小写不敏感的同名请求头；自定义网关源不会自动收到 OpenRouter 请求头。亲和路由不保证提示缓存命中，也不会在不同模型之间共享缓存。
++
+ 当组合需要通过 pi-ai 的提供方目录、或通过 pi-ai 已安装目录未描述的网关路由模型请求时挂载本插件。`providers` 字典就是整个配置面：每个键都是请求用 `GenerateOptions.provider` 选择的提供方路由名。
+ 
+ 适配器接受 LLM 服务的[仅供请求使用的 user 输入](../llm/README.zh.md#use-this-package)，并可将其与持久历史混用。user 身份与来源不会进入 pi-ai 内容；assistant 回放元数据和工具调用关联仍由持久消息携带。
+diff --git a/packages/llm/llm-pi-ai/src/adapter.ts b/packages/llm/llm-pi-ai/src/adapter.ts
+index de9f3e0e427118edb03f069ebbd9c7d67f736822..facc6eec313b0713b6078901e4a361ea5671a61c 100644
+--- a/packages/llm/llm-pi-ai/src/adapter.ts
++++ b/packages/llm/llm-pi-ai/src/adapter.ts
+@@ -201,13 +201,18 @@ function reasoningInfo(
+   }
+ }
+ 
+-/** Merge deployment headers while removing case-insensitive attribution collisions. */
+-function requestHeaders(headers: Readonly<Record<string, string>> | undefined): Record<string, string> {
++/** Harness owns attribution and the official OpenRouter session-affinity header. */
++function requestHeaders(
++  headers: Readonly<Record<string, string>> | undefined, baseURL: string, sessionId?: string,
++): Record<string, string> {
+   const attribution = attributionHeaders()
++  const affinity = sessionId !== undefined && URL.parse(baseURL)?.origin === 'https://openrouter.ai'
+   const reserved = new Set(Object.keys(attribution).map(name => name.toLowerCase()))
++  if (affinity) reserved.add('x-session-id')
+   return {
+     ...Object.fromEntries(Object.entries(headers ?? {}).filter(([name]) => !reserved.has(name.toLowerCase()))),
+     ...attribution,
++    ...affinity ? { 'x-session-id': sessionId } : {},
+   }
+ }
+ 
+@@ -385,7 +390,7 @@ export class PiAiAdapter extends LlmAdapter {
+         signal: watchdog.signal,
+         // Profile headers are deployment-owned; attribution names are
+         // Harness-owned and therefore win collisions.
+-        headers: requestHeaders(profile.headers),
++        headers: requestHeaders(profile.headers, model.baseUrl, options.sessionId),
+       })
+       const iterator = toStreamChunks(events, model.contextWindow, options.signal, model.id)[Symbol.asyncIterator]()
+       let exhausted = false
+diff --git a/packages/llm/llm-pi-ai/tests/adapter.spec.ts b/packages/llm/llm-pi-ai/tests/adapter.spec.ts
+index 1081125a7e291e5ba2044f815f5cda0a9e9abeac..61148c8b482e91895abc1b46ebbb8cc709dfdb8d 100644
+--- a/packages/llm/llm-pi-ai/tests/adapter.spec.ts
++++ b/packages/llm/llm-pi-ai/tests/adapter.spec.ts
+@@ -1,5 +1,6 @@
+ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+ import { Context, Service } from '@deepseek-ai/cordis'
++import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
+ import { AttachmentId, AttachmentStore, ImageVariantId } from '@deepseek-ai/dsh-attachment'
+ import type {
+   ImageAttachmentLimits,
+@@ -73,6 +74,29 @@ beforeEach(() => {
+ })
+ 
+ describe('PiAiAdapter provider routing', () => {
++  it('sends stable OpenRouter affinity per session and overrides static headers', async () => {
++    const seen: Headers[] = []
++    const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
++      const request = new Request(input, init)
++      seen.push(request.headers)
++      return new Response(textEvents.map(event => `data: ${event}\n\n`).join(''), {
++        headers: { 'content-type': 'text/event-stream' },
++      })
++    })
++    try {
++      const adapter = adapterOf({ gateway: {
++        api: 'openai-completions', baseURL: 'https://openrouter.ai/api/v1',
++        headers: { 'X-Session-ID': 'static-must-not-win' }, models: [{ id: 'test-model' }],
++      } })
++      for (const id of ['session-a', 'session-a', 'session-b']) {
++        const chunks = []
++        for await (const chunk of adapter.stream({ provider: 'gateway', model: 'test-model', messages: [],
++          sessionId: brandString<Branded<'SessionId'>>(id) })) chunks.push(chunk)
++        expect(chunks).toContainEqual(expect.objectContaining({ type: 'text-delta', text: 'hello' }))
++      }
++      expect(seen.map(headers => headers.get('x-session-id'))).toEqual(['session-a', 'session-a', 'session-b'])
++    } finally { fetch.mockRestore() }
++  })
+   it('resolves a catalog model dynamically and uses a private endpoint', async () => {
+     const server = await mockServer([{ events: textEvents }])
+     const ctx = await harness(server.url)
+diff --git a/packages/session/session-persistence/tests/storage-contract.spec.ts b/packages/session/session-persistence/tests/storage-contract.spec.ts
+index 2f34cd384f60217e4b4c5be44a03bc882445a0bb..bd0a6de92e553bc8d627ddd8fcdeacd2a4445237 100644
+--- a/packages/session/session-persistence/tests/storage-contract.spec.ts
++++ b/packages/session/session-persistence/tests/storage-contract.spec.ts
+@@ -4,7 +4,7 @@
+  */
+ 
+ import { describe, expect, it } from 'vitest'
+-import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session'
++import { SESSION_FORMAT_VERSION, Session, SessionId } from '@deepseek-ai/dsh-session'
+ import type { SessionEvent } from '@deepseek-ai/dsh-session'
+ import {
+   SessionAlreadyExistsError,
+@@ -28,6 +28,12 @@ import { meta } from './contract.ts'
+ 
+ const LOCATION: SessionLocation = { kind: 'jsonl', path: '/store/session.jsonl' }
+ 
++declare module '@deepseek-ai/dsh-session/types' {
++  interface SessionEventMap {
++    'external/routing-status': { model: string }
++  }
++}
++
+ /** A stored user/message event with a well-formed identified message. */
+ function userMessage(seq: number): SessionEvent {
+   return {
+@@ -147,6 +153,24 @@ describe('validateStoredEvents', () => {
+     expect(events[0]).toMatchObject({ type: 'foreign/telemetry', ignorable: true })
+   })
+ 
++  it('reloads informational events produced by append and still refuses unmarked events', () => {
++    const m = meta('external-routing')
++    const session = Session.create(m.id)
++    session.append('external/routing-status', { model: 'economy' }, { ignorable: true })
++    const events = JSON.parse(JSON.stringify(session.snapshotEvents())) as SessionEvent[]
++    expect(validateStoredEvents(m, events)).toBe(events)
++    expect(events[0]).toMatchObject({ ignorable: true, data: { model: 'economy' } })
++    expect(Session.create(m.id, events).deriveMessages()).toEqual([])
++    const required = Session.create(m.id)
++    required.append('external/routing-status', { model: 'frontier' })
++    expect(() => validateStoredEvents(m, [...required.snapshotEvents()])).toThrow(/not marked ignorable/)
++    expect(() => session.append('external/routing-status', { model: 'bad' }, {
++      // @ts-expect-error Runtime callers must also use the literal true marker.
++      ignorable: false,
++    })).toThrow(/ignorable must be true/)
++    expect(session.seq).toBe(1)
++  })
++
+   it('refuses the retired request/header "fallback" reason while accepting current headers', () => {
+     const m = meta('retired-reason')
+     const retired = [
