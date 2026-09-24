@@ -16,12 +16,11 @@ try {
   run('bun', ['pm', 'pack', '--destination', dir], root)
   const tarball = readdirSync(dir).find(file => file.endsWith('.tgz'))
   if (!tarball) throw new Error('No tarball was produced')
-  cpSync(join(root, 'patches'), join(dir, 'patches'), { recursive: true })
   cpSync(join(root, 'scripts/installed-smoke.mjs'), join(dir, 'smoke.mjs'))
   const dependencies = { [pkg.name]: `file:${join(dir, tarball)}`, ...pkg.peerDependencies,
-    '@deepseek-ai/dsh-agent-loop': '0.1.7-alpha.1', '@deepseek-ai/dsh-tools': '0.1.7-alpha.1' }
-  writeFileSync(join(dir, 'package.json'), JSON.stringify({ private: true, type: 'module', dependencies,
-    patchedDependencies: pkg.patchedDependencies }, null, 2))
+    '@deepseek-ai/dsh-agent-loop': '0.1.7-alpha.1', '@deepseek-ai/dsh-tools': '0.1.7-alpha.1',
+    '@deepseek-ai/dsh-storage': '0.1.7-alpha.1', '@deepseek-ai/dsh-storage-json': '0.1.7-alpha.1' }
+  writeFileSync(join(dir, 'package.json'), JSON.stringify({ private: true, type: 'module', dependencies }, null, 2))
   run('bun', ['install', '--ignore-scripts'], dir)
   run(process.execPath, ['smoke.mjs'], dir)
   console.log('Clean packed-install verification passed.')

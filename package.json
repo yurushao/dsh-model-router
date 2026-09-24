@@ -30,6 +30,7 @@
     "scripts/verify-install.mjs",
     "scripts/installed-smoke.mjs",
     "scripts/verify-host.mjs",
+    "scripts/host-probe.mjs",
     "CONTRIBUTING.md",
     "SECURITY.md",
     "CHANGELOG.md",
