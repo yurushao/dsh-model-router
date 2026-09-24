@@ -1,10 +1,7 @@
 DSH Model Router
 Copyright (c) 2026 Yuru Shao
 
-The compatibility patches modify DeepSeek Harness, copyright (c) 2026 DeepSeek,
-available under the MIT License. Its license is reproduced in
-compatibility/HARNESS-LICENSE. The patches are based on the revision recorded
-in compatibility/harness.json. Dependency packages retain their own licenses.
-
 This is an independent community plugin. DeepSeek, Jev and OpenRouter are
 identified as supported software or services, not as project sponsors.
+Dependency packages retain their own licenses. The plugin does not distribute
+or apply Harness source patches.

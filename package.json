@@ -1,6 +1,6 @@
 {
   "name": "@yurushao/dsh-model-router",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "DSH Model Router: automatic model selection for DeepSeek Harness, powered by Jev",
   "type": "module",
   "main": "./dist/index.js",

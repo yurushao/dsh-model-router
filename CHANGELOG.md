@@ -1,9 +1,17 @@
 ---
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-24
 ---
 
 # Changelog
+
+## 0.5.0 — 2026-09-24
+
+- Removes Host source and dependency patches; uses standard model-selection events, plugin storage and public UI slots. Historical releases below describe the earlier patched distribution.
+
+- Uses the Harness model catalog as Jev's candidate list. Jev selects a specific model using its name and ID.
+- Preserves the initiating task when a default Auto route records its first standard model selection.
+- Limits the plugin settings page to Jev API configuration; old economy/frontier route settings are ignored.
 
 ## 0.4.0 — experimental public release
 

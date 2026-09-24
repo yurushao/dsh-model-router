@@ -1,41 +1,27 @@
 ---
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-24
 ---
 
 # Harness compatibility
 
-Release 0.4.0 targets Harness `0.1.7-alpha.1` at the exact commit and patch hash in [harness.json](../compatibility/harness.json). The published Session packages inspected at release preparation did not expose informational append metadata. A stock installation therefore fails the plugin's startup probe before writing any router events.
+The plugin targets the unmodified Harness version and commit recorded in [harness.json](../compatibility/harness.json). It does not patch Host source or installed dependencies.
 
-The companion patch contains:
+Routing uses the public model catalog and adapter registration APIs, `agent/*` and `system-prompt/assemble` events. Auto intent uses the existing `model/selection` session event. The actual model remains in the Host's normal `request/header` events. The plugin's latest decision and task anchor are stored through `storageDomain` in the `jev_router` domain; no new custom Session records are written.
 
-- A Session append option for `ignorable: true`, allowing external informational events to reload safely without changing model-visible history.
-- Auto/manual model-picker state, actual-model reply labels, and routing-reason presentation in the client.
-- OpenRouter's stable per-session affinity header in the answer adapter.
-- Corresponding upstream unit tests, API catalog and documentation updates.
+The browser bundle contributes a Jev configuration page and an Auto/current-model label through public slots. It does not replace the Host's model selector, chat footer or model adapters. The Host's model selector keeps a pending explicit Auto choice while requests execute with a concrete model. The plugin does not add OpenRouter affinity headers; that behavior belongs to the installed answer adapter.
 
-The patch excludes the author's custom icons, personal profile, provider credentials, desktop branding, and unrelated lockfile edits. DeepSeek's MIT notice is retained in `compatibility/HARNESS-LICENSE`.
+Old `jev-router/routing` records remain read-only legacy inputs. Existing records already marked ignorable can be loaded by the stock Session reader. The plugin never rewrites existing session logs. If only an old routing record supplies Auto intent, the next automatic turn records a standard Auto selection. A sidecar is scoped to the original session ID; a fork without a sidecar reconstructs task context from its own history.
 
-## Prepare and build
+## Test a clean Host
 
 ```sh
-node scripts/prepare-harness.mjs --dir .cache/harness --build
+node scripts/prepare-harness.mjs --dir .cache/harness-stock --build
+node scripts/verify-host.mjs --dir .cache/harness-stock
 ```
 
-The script fetches the pinned public commit, applies the checksum-verified patch and runs upstream's frozen dependency installation and full build. An already prepared checkout is accepted only when its tracked diff exactly matches the bundled patch. Use a new directory for another revision. On macOS, the child build clears an inherited `CPATH` so clang chooses its own SDK headers; this does not change the parent shell.
+Preparation fetches a separate stock checkout. It refuses a mismatched revision or tracked modifications and never applies a patch. Building may require the native prerequisites documented by Harness. Desktop packaging and signing are separate from plugin installation.
 
-Native prerequisites are inherited from Harness. The supported initial target is Node 24 on macOS/Linux with native build tools. Desktop application packaging/signing is separate from the Host/Web build. The web interface contains the same routing controls. The package does not install or redistribute a signed desktop application.
+## Updating the target
 
-## Development dependency patch
-
-`package.json` declares a Bun `patchedDependencies` entry for the exact published Session version. It supplies the same append metadata behavior in the test runtime. `bun install --frozen-lockfile` applies this reproducibly. The plugin's own package installation does not apply a dependency patch to an arbitrary host; install the companion host build.
-
-## Upgrade the compatibility target
-
-1. Choose a specific public Harness commit and inspect its APIs and license.
-2. Port the necessary host changes in an isolated checkout; preserve upstream invariants and tests.
-3. Export a full-index patch and update the SHA-256 in `harness.json`.
-4. Align peer and development dependencies, the registry-runtime test patch, and the Bun lockfile.
-5. Run clean plugin checks, packed-install smoke, a complete host build, the affected host tests, and profile boot verification. Do not infer compatibility from a semver range alone.
-
-Future upstream support can remove these patches after the same clean checks prove it. Until then, the companion source patch is an explicit part of this distribution.
+Review the public interfaces against a specific upstream revision, update pinned dependencies and `harness.json`, then run plugin, packed-install and clean-composition checks. If an interface is insufficient, document the limitation and obtain explicit user confirmation before proposing or applying any Host source changes.

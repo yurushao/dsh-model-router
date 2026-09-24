@@ -1,28 +1,11 @@
-# Apply after installing the bundle. A config override replaces the whole config.
+# Apply after installing the bundle. Candidate models come from Harness Settings → Models.
 - id: jev-router
   disabled: false
   config:
-    apiKey: !!js process.env.OPENROUTER_API_KEY
+    apiKeyEnv: OPENROUTER_API_KEY
     endpoint: https://openrouter.ai/api/alpha/decisions
     jevModel: typesafe/jev-1.13
-    economyThreshold: 0.8
-    newTaskThreshold: 0.9
     timeoutMs: 3000
     maxRoutingBytes: 16000
     historyMessages: 0
-    fallbackTier: frontier
     includeSubagents: true
-    models:
-      economy:
-        provider: !!js process.env.JEV_ECONOMY_PROVIDER
-        model: !!js process.env.JEV_ECONOMY_MODEL
-        description: Low-cost model for everyday translation, extraction and small coding tasks.
-        supportsTools: true
-        supportsImages: false
-      frontier:
-        provider: !!js process.env.JEV_FRONTIER_PROVIDER
-        model: !!js process.env.JEV_FRONTIER_MODEL
-        description: Strong model for difficult coding, reasoning and research synthesis.
-        supportsTools: true
-        supportsImages: false
-        # reasoningEffort: high  # Only if this exact adapter/model supports it.

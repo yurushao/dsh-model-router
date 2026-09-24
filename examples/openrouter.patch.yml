@@ -1,5 +1,5 @@
-# For a dedicated web profile. This replaces the llm-pi-ai provider dictionary.
-# Keep other provider entries if merging into an existing profile.
+# For a dedicated web profile. Keep existing provider entries when merging.
+# Jev chooses among all registered Harness models using their names and IDs.
 - id: llm-pi-ai
   config:
     providers:
@@ -9,29 +9,14 @@
         api: openai-completions
         baseURL: https://openrouter.ai/api/v1
         models:
-          - id: !!js process.env.JEV_ECONOMY_MODEL
-            name: Economy
+          - id: !!js process.env.JEV_SMALL_MODEL
+            name: !!js process.env.JEV_SMALL_MODEL
             maxTokens: 2048
-          - id: !!js process.env.JEV_FRONTIER_MODEL
-            name: Frontier
+          - id: !!js process.env.JEV_LARGE_MODEL
+            name: !!js process.env.JEV_LARGE_MODEL
             maxTokens: 8192
 - id: jev-router
   disabled: false
   config:
-    apiKey: !!js process.env.OPENROUTER_API_KEY
+    apiKeyEnv: OPENROUTER_API_KEY
     historyMessages: 0
-    economyThreshold: 0.8
-    newTaskThreshold: 0.9
-    models:
-      economy:
-        provider: openrouter
-        model: !!js process.env.JEV_ECONOMY_MODEL
-        description: Low-cost model for translation, extraction, rewriting and routine tasks.
-        supportsTools: true
-        supportsImages: false
-      frontier:
-        provider: openrouter
-        model: !!js process.env.JEV_FRONTIER_MODEL
-        description: Strong model for complex coding, debugging, research and reasoning.
-        supportsTools: true
-        supportsImages: false
