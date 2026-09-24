@@ -6,17 +6,31 @@ import { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
 import { Session } from '@deepseek-ai/dsh-session'
 import { config, decision, harness, send, toolResponse } from './helpers.js'
-import { AUTO, sessionRouting, taskContext } from '../src/mode.js'
+import { AUTO, openRoutingStore, sessionRouting, taskContext } from '../src/mode.js'
 import * as plugin from '../src/index.js'
 
-declare module '@deepseek-ai/dsh-session/types' {
-  interface SessionEventMap {
-    'model/selection': { provider: string; model: string; reasoningEffort?: string }
-  }
-}
 
 const contexts: Context[] = []
 const servers: Server[] = []
+
+test('a credential reference supplies the Jev request key without inline config', async () => {
+  const name = 'JEV_ROUTER_TEST_KEY'
+  const previous = process.env[name]
+  process.env[name] = 'key-from-reference'
+  try {
+    const headers: string[] = []
+    const h = await setup(endpoint(request => {
+      headers.push(request.headers.get('authorization') ?? '')
+      return Response.json(decision(0.95))
+    }), { apiKey: undefined, apiKeyEnv: name })
+    await send(await h.createAgent(), 'Translate hello')
+    expect(headers).toEqual(['Bearer key-from-reference'])
+    expect(h.errors).toEqual([])
+  } finally {
+    if (previous === undefined) delete process.env[name]
+    else process.env[name] = previous
+  }
+})
 
 test('returning from manual to Auto starts with no stale task anchor', async () => {
   const inputs: { state: { currentTask: string | null } }[] = []
@@ -34,10 +48,13 @@ test('returning from manual to Auto starts with no stale task anchor', async () 
   expect(h.records.at(-1)?.taskStartTurn).toBe(3)
   const restored = Session.create(agent.id, agent.session.snapshotEvents())
   expect(taskContext(restored)).toEqual({ turn: 3, text: 'A fresh automatic task' })
-  expect(sessionRouting(restored)).toMatchObject({ economyProbability: 0.99, taskRelation: 'new-task', newTaskProbability: 0.99 })
+  await h.fiber.dispose()
+  const store = await openRoutingStore(h.ctx)
+  try { expect(store.read(restored)).toMatchObject({ taskRelation: 'new-task', newTaskProbability: 0.99 }) }
+  finally { await store.close() }
 })
 
-test('plugin reload recovers the incumbent and task anchor from session history', async () => {
+test('plugin reload recovers the task anchor from its storage domain', async () => {
   let calls = 0
   const url = await endpoint(() => Response.json(decision(++calls === 1 ? 0.05 : 0.99)))
   const h = await setup(url)
@@ -47,13 +64,13 @@ test('plugin reload recovers the incumbent and task anchor from session history'
   await h.ctx.plugin(plugin, { ...config({ endpoint: url }) })
   await send(agent, 'Summarize that briefly')
   expect(h.errors).toEqual([])
-  expect(h.adapter.requests.map(request => request.model)).toEqual(['large', 'large'])
-  expect(h.records[1]).toMatchObject({ reason: 'session-sticky', taskStartTurn: 1 })
+  expect(h.adapter.requests.map(request => request.model)).toEqual(['large', 'small'])
+  expect(h.records[1]).toMatchObject({ reason: 'jev', taskStartTurn: 1 })
 })
 
-test('upgrades for difficult work, retains frontier for follow-ups, and downgrades only for a clear new task', async () => {
+test('Jev selects directly from Host models on every new turn', async () => {
   const replies = [decision(0.95), decision(0.05), decision(0.99), decision(0.99, 0.7), decision(0.99, 0.98)]
-  const inputs: { state: { currentModel: { tier: string } | null; currentTask: string | null } }[] = []
+  const inputs: { state: { currentModel: { model: string } | null; currentTask: string | null } }[] = []
   const h = await setup(endpoint(async request => {
     inputs.push(await request.json() as typeof inputs[number])
     return Response.json(replies.shift())
@@ -61,19 +78,19 @@ test('upgrades for difficult work, retains frontier for follow-ups, and downgrad
   const agent = await h.createAgent()
   for (const prompt of ['Translate this document', 'Resolve its ambiguous legal terminology', 'Explain that briefly', 'Maybe translate another part', 'New task: extract names from this list']) await send(agent, prompt)
   expect(h.errors).toEqual([])
-  expect(h.adapter.requests.map(r => r.model)).toEqual(['small', 'large', 'large', 'large', 'small'])
+  expect(h.adapter.requests.map(r => r.model)).toEqual(['small', 'large', 'small', 'small', 'small'])
   expect(inputs[0]!.state.currentModel).toBeNull()
-  expect(inputs[2]!.state).toMatchObject({ currentModel: { tier: 'frontier' }, currentTask: 'Translate this document' })
+  expect(inputs[2]!.state).toMatchObject({ currentModel: { model: 'large' }, currentTask: 'Translate this document' })
   expect(h.records.map(r => r.taskStartTurn)).toEqual([1, 1, 1, 1, 5])
-  expect(h.records.map(r => r.switched)).toEqual([false, true, false, false, true])
-  expect(h.records[2]!.reason).toBe('session-sticky')
+  expect(h.records.map(r => r.switched)).toEqual([false, true, true, false, false])
+  expect(h.records[2]!.reason).toBe('jev')
   const restored = Session.create(agent.id, agent.session.snapshotEvents())
   expect(taskContext(restored)).toEqual({ turn: 5, text: 'New task: extract names from this list' })
   expect(restored.requestHeader()?.config.model).toBe('small')
   expect(new Set(h.adapter.requests.map(r => r.sessionId))).toEqual(new Set([agent.id]))
 })
 
-test.each(['http', 'malformed', 'timeout'])('Jev %s failure retains the existing economy route', async failure => {
+test.each(['http', 'malformed', 'timeout'])('Jev %s failure retains the existing model', async failure => {
   let calls = 0
   const h = await setup(endpoint(() => {
     if (++calls === 1) return Response.json(decision(0.99))
@@ -86,17 +103,6 @@ test.each(['http', 'malformed', 'timeout'])('Jev %s failure retains the existing
   expect(h.errors).toEqual([])
   expect(h.adapter.requests.map(r => r.model)).toEqual(['small', 'small'])
   expect(h.records[1]).toMatchObject({ reason: 'jev-unavailable-retained', taskStartTurn: 1, switched: false })
-})
-
-test('a current route beyond its input limit cannot win through stickiness', async () => {
-  const c = config()
-  c.models.economy.maxInputChars = 700
-  const h = await setup(endpoint(() => Response.json(decision(0.99))), { models: c.models })
-  const agent = await h.createAgent()
-  await send(agent, 'Hello')
-  await send(agent, 'x'.repeat(1000))
-  expect(h.adapter.requests.map(r => r.model)).toEqual(['small', 'large'])
-  expect(h.records[1]!.reason).toBe('capability')
 })
 
 test('oversized classifier input preserves an eligible incumbent without a Jev request', async () => {
@@ -122,8 +128,7 @@ test('manual selection bypasses Jev and Auto restores routing with durable inten
   expect(calls).toBe(1)
   expect(h.adapter.requests.at(-1)?.model).toBe('large')
   const routingEvents = agent.session.snapshotEvents().filter(event => event.type === 'jev-router/routing')
-  expect(routingEvents.length).toBeGreaterThan(0)
-  expect(routingEvents.every(event => event.ignorable === true)).toBe(true)
+  expect(routingEvents).toEqual([])
   const restored = Session.create(agent.id, agent.session.snapshotEvents())
   expect(sessionRouting(restored)).toMatchObject({ mode: 'auto', status: 'selected', model: 'large' })
   expect(h.ctx.sessionProjections.snapshot(agent.session).values.jevRouting).toMatchObject({ mode: 'auto', model: 'large' })
@@ -180,7 +185,7 @@ async function setup(url: string | Promise<string>, overrides: Record<string, un
 }
 
 test('routes two turns, preserves history and persists the actual model in replay', async () => {
-  type Body = { model: string; state: { recentHistory: unknown[] }; questions: { tier: { type: string } } }
+  type Body = { model: string; state: { recentHistory: unknown[] }; questions: { model: { type: string; criteria: Record<string, string> } } }
   const calls: Body[] = []
   const h = await setup(endpoint(async request => {
     expect(new URL(request.url).pathname).toBe('/api/alpha/decisions')
@@ -203,7 +208,8 @@ test('routes two turns, preserves history and persists the actual model in repla
   expect(calls).toHaveLength(2)
   expect(calls[1]!.state.recentHistory.length).toBeGreaterThan(0)
   expect(calls[0]!.model).toBe('typesafe/jev-1.13')
-  expect(calls[0]!.questions.tier.type).toBe('choice')
+  expect(calls[0]!.questions.model.type).toBe('choice')
+  expect(calls[0]!.questions.model.criteria.model_0).toContain('small')
   expect(JSON.stringify(h.adapter.requests[0]!.messages)).toContain('Selected model: small')
   expect(JSON.stringify(h.adapter.requests[1]!.messages)).toContain('Selected model: large')
   const notices = h.adapter.requests[1]!.messages.filter(message => message.source?.kind === 'jev-router')
@@ -212,7 +218,7 @@ test('routes two turns, preserves history and persists the actual model in repla
   expect(h.adapter.requests[1]!.messages.some(message => String(message.source?.kind) === 'plugin')).toBe(false)
   const replay = Session.create(agent.id, agent.session.snapshotEvents())
   expect(replay.requestHeader()?.config.model).toBe('large')
-  expect(h.records.map(r => r.tier)).toEqual(['economy', 'frontier'])
+  expect(h.records.map(r => r.model)).toEqual(['small', 'large'])
 })
 
 test('one Jev call covers tool continuations and produces no incorrect baseline switch notice', async () => {
@@ -267,7 +273,7 @@ test.each([['HTTP failure', () => new Response('private-provider-error', { statu
   await send(await h.createAgent(), 'Translate 你好')
   expect(h.errors).toEqual([])
   expect(calls).toBe(1)
-  expect(h.adapter.requests.map(r => r.model)).toEqual(['large', 'large'])
+  expect(h.adapter.requests.map(r => r.model)).toEqual(['small', 'small'])
   expect(h.records[0]!.reason).toBe('jev-unavailable')
 })
 
@@ -275,7 +281,7 @@ test('timeout falls back without waiting for a hanging Jev response', async () =
   const h = await setup(endpoint(() => new Promise(() => {})), { timeoutMs: 30 })
   await send(await h.createAgent(), 'Translate this')
   expect(h.errors).toEqual([])
-  expect(h.adapter.requests[0]!.model).toBe('large')
+  expect(h.adapter.requests[0]!.model).toBe('small')
   expect(h.records[0]!.reason).toBe('jev-unavailable')
 })
 
@@ -304,7 +310,7 @@ test('plugin unload cancels its Jev call and removes routing listeners', async (
   expect(h.adapter.requests[0]!.model).toBe('large')
 })
 
-test('routing clears an inherited effort that the economy model cannot honor', async () => {
+test('routing clears an inherited effort that the Jev-chosen model may not honor', async () => {
   const h = await setup(endpoint(() => Response.json(decision(0.95))))
   h.ctx.on('agent/request', async (_payload, next) => ({ ...await next(), reasoningEffort: ReasoningEffortId('high') }))
   await send(await h.createAgent(), 'Translate this')
@@ -320,14 +326,50 @@ test('disabled plugin leaves the existing model selection intact', async () => {
   expect(h.adapter.requests[0]!.model).toBe('large')
 })
 
-test('no eligible model fails before making paid requests', async () => {
+test('no Host model fails before making paid requests', async () => {
   let calls = 0
-  const c = config()
-  c.models.economy.maxInputChars = 1
-  c.models.frontier.maxInputChars = 1
-  const h = await setup(endpoint(() => { calls++; return Response.json(decision(0.95)) }), { models: c.models })
+  const h = await setup(endpoint(() => { calls++; return Response.json(decision(0.95)) }))
+  h.adapter.listModels = () => Promise.resolve([])
   await send(await h.createAgent(), 'Translate this')
   expect(calls).toBe(0)
   expect(h.adapter.requests).toHaveLength(0)
-  expect(String(h.errors[0])).toContain('no configured model')
+  expect(String(h.errors[0])).toContain('no available models')
+})
+
+test('loading the plugin does not take over a concrete default without an Auto selection', async () => {
+  let calls = 0
+  const h = await setup(endpoint(() => { calls++; return Response.json(decision(0.95)) }))
+  const agent = await h.createAgent('large', false)
+  await send(agent, 'Keep my existing model')
+  expect(calls).toBe(0)
+  expect(h.adapter.requests[0]?.model).toBe('large')
+  expect(agent.session.snapshotEvents().some(event => event.type === 'jev-router/routing')).toBe(false)
+})
+
+test('unloading removes Auto and permits reopening the plugin storage domain', async () => {
+  const h = await setup(endpoint(() => Response.json(decision(0.95))))
+  const agent = await h.createAgent()
+  await send(agent, 'Translate hello')
+  await h.fiber.dispose()
+  expect(h.ctx.llm.listProviders().some(provider => provider.id === AUTO.provider)).toBe(false)
+  const store = await openRoutingStore(h.ctx)
+  try {
+    expect(store.read(agent.session)).toMatchObject({ provider: 'mock', model: 'small', taskStartTurn: 1 })
+  } finally { await store.close() }
+})
+
+
+test('default Auto preserves the initiating task when recording its standard selection', async () => {
+  const tasks: unknown[] = []
+  const h = await setup(endpoint(async request => {
+    const body = await request.json() as { state: { currentTask: unknown } }
+    tasks.push(body.state.currentTask)
+    return Response.json(decision(0.95))
+  }))
+  const agent = await h.createAgent(AUTO, false)
+  await send(agent, 'Translate hello')
+  await send(agent, 'Make it shorter')
+  expect(h.errors).toEqual([])
+  expect(tasks[1]).toBe('Translate hello')
+  expect(agent.session.snapshotEvents().filter(event => event.type === 'model/selection')).toHaveLength(1)
 })

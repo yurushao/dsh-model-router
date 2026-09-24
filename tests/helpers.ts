@@ -1,3 +1,10 @@
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import Storage from '@deepseek-ai/dsh-storage'
+import * as StorageJson from '@deepseek-ai/dsh-storage-json'
+import * as StorageDomain from '@deepseek-ai/dsh-storage-domain'
+import { AUTO } from '../src/mode.js'
 import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry, { installModelSelection, type Agent, type ModelSelectionRef } from '@deepseek-ai/dsh-agent'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
@@ -7,22 +14,19 @@ import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import * as plugin from '../src/index.js'
-import { Config } from '../src/config.js'
+import { Config, resolveConfig } from '../src/config.js'
 
 export function config(overrides: Record<string, unknown> = {}): Config {
-  return Config({
+  const resolved = resolveConfig(Config({
     apiKey: 'test-only',
-    models: {
-      economy: { provider: 'mock', model: 'small', description: '', supportsTools: true, supportsImages: false },
-      frontier: { provider: 'mock', model: 'large', description: '', supportsTools: true, supportsImages: false },
-    },
     ...overrides,
-  })
+  }))
+  return resolved
 }
 
 export function decision(economy: number, newTask = 0.05) {
   return { answers: {
-    tier: { type: 'choice', choice: economy > 0.5 ? 'economy' : 'frontier', probabilities: { economy, frontier: 1 - economy }, confidence: 0.9 },
+    model: { type: 'choice', choice: economy > 0.5 ? 'model_0' : 'model_1', probabilities: { model_0: economy, model_1: 1 - economy } },
     taskRelation: { type: 'choice', choice: newTask > 0.5 ? 'new-task' : 'continuation', probabilities: { 'new-task': newTask, continuation: 1 - newTask } },
   }, usage: { cost: 0.00001, input_tokens: 100 } }
 }
@@ -51,6 +55,12 @@ export function toolResponse(): StreamChunk[] {
 export class RecordingAdapter extends LlmAdapter {
   requests: GenerateOptions[] = []
   script: StreamChunk[][] = []
+  override listModels(provider: string) {
+    return Promise.resolve([
+      { provider, id: 'small', name: 'Small model' },
+      { provider, id: 'large', name: 'Large model' },
+    ])
+  }
   override async resolveModel(provider: string, model: string) {
     return {
       provider, id: model, name: model,
@@ -65,6 +75,11 @@ export class RecordingAdapter extends LlmAdapter {
 
 export async function harness(configuration: Config) {
   const ctx = new Context()
+  const storageRoot = await mkdtemp(join(tmpdir(), 'jev-test-'))
+  ctx.effect(() => () => rm(storageRoot, { recursive: true, force: true }))
+  await ctx.plugin(Storage)
+  await ctx.plugin(StorageJson, { root: storageRoot })
+  await ctx.plugin(StorageDomain, { backend: 'json' })
   await ctx.plugin(LlmRuntime)
   await ctx.plugin(SessionStore)
   await ctx.plugin(SessionProjectionRegistry)
@@ -81,10 +96,12 @@ export async function harness(configuration: Config) {
   const errors: unknown[] = []
   ctx.on('agent/error', ({ error }) => { errors.push(error) })
   let number = 0
-  async function createAgent(baseline = 'large'): Promise<Agent> {
-    const agent = await ctx.agentLoop.create(SessionId(`agent-${++number}`), { provider: 'mock', model: baseline })
-    const selection: ModelSelectionRef = { current: { provider: 'mock', model: baseline }, assembled: undefined }
+  async function createAgent(baseline: string | { provider: string; model: string } = 'large', automatic = true): Promise<Agent> {
+    const route = typeof baseline === 'string' ? { provider: 'mock', model: baseline } : baseline
+    const agent = await ctx.agentLoop.create(SessionId(`agent-${++number}`), route)
+    const selection: ModelSelectionRef = { current: route, assembled: undefined }
     installModelSelection(agent.ctx, selection)
+    if (automatic) agent.session.append('model/selection', AUTO)
     return agent
   }
   return { ctx, adapter, fiber, records, errors, createAgent }

@@ -1,8 +1,10 @@
+import type {} from '@deepseek-ai/dsh-api-session-controller'
 import type { Context } from '@deepseek-ai/cordis'
-import { Session, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session'
+import { type Session, type SessionEvent } from '@deepseek-ai/dsh-session'
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
 import { LlmAdapter, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
 import { z } from 'zod'
+import { defineDomain, domainTable } from '@deepseek-ai/dsh-storage-domain'
 
 export const AUTO = { provider: 'jev-router', model: 'auto' } as const
 
@@ -30,14 +32,42 @@ declare module '@deepseek-ai/dsh-session-projection' {
   interface SessionProjectionMap { jevRouting: RoutingView }
 }
 
-export function appendRouting(session: Session, data: RoutingView): void {
-  // The local Harness append extension accepts explicit informational metadata.
-  const append: (type: 'jev-router/routing', data: RoutingView, opts: { ignorable: true }) => SessionEvent<'jev-router/routing'> = session.append.bind(session)
-  append('jev-router/routing', data, { ignorable: true })
+const routingDomain = defineDomain({
+  name: 'jev_router', version: 1,
+  tables: { sessions: domainTable(z.object({ selectionSeq: z.number().int(), state: routingSchema })) },
+})
+
+/** Persist plugin-owned diagnostics through the public storage-domain service. */
+export async function openRoutingStore(ctx: Context) {
+  const domain = await ctx.storageDomain.open(routingDomain)
+  const sessions = domain.table('sessions')
+  return {
+    read(session: Session): RoutingView {
+      const saved = sessions.get(session.id)
+      const intent = routingIntent(session)
+      return saved && saved.selectionSeq === intent?.seq ? { ...saved.state, mode: intent.mode } : sessionRouting(session)
+    },
+    write(session: Session, state: RoutingView, selectionSeq: number): Promise<void> {
+      return sessions.put(session.id, { selectionSeq, state })
+    },
+    close: () => domain.close(),
+  }
+}
+
+export function routingIntent(session: Session): { mode: 'auto' | 'manual'; seq: number } | undefined {
+  for (const event of session.snapshotEvents().toReversed()) {
+    const chosen = selection(event)
+    if (chosen) return { mode: chosen.provider === AUTO.provider && chosen.model === AUTO.model ? 'auto' : 'manual', seq: event.seq }
+  }
+  // Older releases stored Auto intent in ignorable router records. Read them
+  // once; the next automatic turn writes the standard model/selection event.
+  const legacy = session.snapshotEvents().findLast(event => event.type === 'jev-router/routing')
+  if (legacy?.type === 'jev-router/routing') return { mode: legacy.data.mode, seq: -1 }
+  return undefined
 }
 
 export function initialRouting(): RoutingView {
-  return { mode: 'auto', status: 'idle', turn: 0, provider: '', model: '', reason: '' }
+  return { mode: 'manual', status: 'idle', turn: 0, provider: '', model: '', reason: '' }
 }
 
 function selection(event: SessionEvent): { provider: string; model: string } | undefined {
@@ -56,35 +86,42 @@ export function applyRouting(state: RoutingView, event: SessionEvent): RoutingVi
     reason: '',
   }
   if (event.type === 'jev-router/routing') return { ...event.data, mode: state.mode }
+  if (event.type === 'turn/start') return { ...state, turn: event.data.turn }
+  if (event.type === 'request/header') return { ...state, status: 'selected', provider: event.data.header.config.provider, model: event.data.header.config.model }
   if (event.type === 'turn/end' && state.status === 'selecting') return { ...state, status: 'idle' }
   return state
 }
 
 export function sessionRouting(session: Session): RoutingView {
-  return session.snapshotEvents().reduce(applyRouting, initialRouting())
+  const state = session.snapshotEvents().reduce(applyRouting, initialRouting())
+  return { ...state, mode: routingIntent(session)?.mode ?? 'manual' }
 }
 
 /** Recover the initiating user request from durable history without generating another summary. */
-export function taskContext(session: Session): { turn: number; text: string | null } | undefined {
+export function taskContext(session: Session, saved?: RoutingView): { turn: number; text: string | null } | undefined {
   let anchor: number | undefined
   let turn = 0
+  let turnOpen = false
   const requests = new Map<number, string[]>()
   for (const event of session.snapshotEvents()) {
     const chosen = selection(event)
     if (chosen !== undefined) {
       anchor = undefined
+      const current = turnOpen ? requests.get(turn) : undefined
       requests.clear()
+      if (current !== undefined) requests.set(turn, current)
     }
     if (event.type === 'jev-router/routing' && event.data.status === 'selected') {
       anchor = event.data.taskStartTurn ?? event.data.turn
     }
-    if (event.type === 'turn/start') turn = event.data.turn
+    if (event.type === 'turn/start') { turn = event.data.turn; turnOpen = true }
+    if (event.type === 'turn/end') turnOpen = false
     if (event.type === 'user/message' && event.data.source.kind === 'user') {
       const texts = event.data.content.filter(block => block.type === 'text').map(block => block.text)
       requests.set(turn, [...requests.get(turn) ?? [], ...texts])
     }
   }
-  anchor ??= [...requests.keys()].at(-1)
+  anchor = saved?.taskStartTurn ?? anchor ?? [...requests.keys()].at(-1)
   return anchor === undefined ? undefined : { turn: anchor, text: requests.get(anchor)?.join('\n') ?? null }
 }
 
@@ -100,17 +137,11 @@ class AutoAdapter extends LlmAdapter {
   }
 }
 
-/** Publish selectable Auto mode and prompt-free, durable routing status. */
+/** Publish Auto and a read-only projection of standard session events. */
 export function installMode(ctx: Context): void {
-  // Reject an unpatched host before writing routing records into any user session.
-  const probe = Session.create(SessionId('jev-router-compatibility-check'))
-  appendRouting(probe, initialRouting())
-  if (probe.snapshotEvents()[0]?.ignorable !== true) {
-    throw new Error('jev-router: incompatible Harness Session API; prepare the pinned compatible host with scripts/prepare-harness.mjs (see README Compatibility)')
-  }
   ctx.effect(() => ctx.llm.registerAdapter([AUTO.provider], new AutoAdapter()))
   const projection = {
-    key: 'jevRouting', stateSchema: routingSchema, stateVersion: 1,
+    key: 'jevRouting', stateSchema: routingSchema, stateVersion: 2,
     init: initialRouting, apply: applyRouting,
     wire: { viewSchema: routingSchema, view: state => state },
   } satisfies ProjectionDefinition<'jevRouting'>
