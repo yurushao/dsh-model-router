@@ -5,6 +5,8 @@ updated: 2026-09-24
 
 # DSH Model Router
 
+[English](README.md) | [简体中文](README.zh.md)
+
 Automatic model selection for DeepSeek Harness through the Jev Decisions API. The plugin reads models already registered in Harness, sends each model's name and ID to Jev, and uses Jev's selected model for the current user turn. Tool continuations and retries keep that selection. A concrete manual model selection bypasses Jev.
 
 The package is `@yurushao/dsh-model-router`. It is an independent community plugin, unaffiliated with DeepSeek, Jev or OpenRouter.
@@ -33,6 +35,7 @@ export DSH_HOME="$PWD/.cache/demo-home"
 export DSH_ROUTER_ROOT="$PWD"
 cd .cache/harness-stock
 npx --yes pnpm@11.7.0 dsh plugin --profile web add "$DSH_ROUTER_ROOT/yurushao-dsh-model-router-0.5.0.tgz"
+npx --yes pnpm@11.7.0 dsh --profile web
 ```
 
 The bundle starts disabled. Open **Plugins** in the sidebar, select **@yurushao/dsh-model-router**, enable its `jev-router` component and open **Configure** to edit Jev. Add or remove answer models in **Settings → Models**. There are no separate economy or frontier model fields in this plugin.

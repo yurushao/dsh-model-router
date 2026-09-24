@@ -19,6 +19,7 @@
     "dist",
     "cordis.patch.yml",
     "README.md",
+    "README.zh.md",
     "examples",
     "scripts/smoke-jev.mjs",
     "scripts/eval-jev.mjs",
