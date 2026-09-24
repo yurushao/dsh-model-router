@@ -1,8 +1,3 @@
----
-created: 2026-09-24
-updated: 2026-09-24
----
-
 # DSH Model Router
 
 [English](README.md) | [简体中文](README.zh.md)
@@ -45,6 +40,26 @@ Jev API Key 输入框将密钥写入 Harness 凭据存储，引用名由 `apiKey
 需要同时配置模型提供方时，参见 [OpenRouter 示例](examples/openrouter.patch.yml)。模型已在 Harness 中配置好的情况下，使用 [仅配置路由器的示例](examples/router.patch.yml)。将这些条目放入当前 profile 的 `cordis.patch.yml`，即可继续通过界面编辑；命令行 `--patch` 覆盖层优先级更高，会阻止保存被覆盖的字段。合并提供方配置时需注意：profile 覆盖可能替换其他提供方。Jev 请求和最终回答模型都可能产生费用。
 
 ## 工作方式
+
+```mermaid
+flowchart TD
+    Start["新的用户轮次"] --> Mode{"模型选择方式"}
+    Mode -->|手动| Manual["使用手动选择的模型"]
+    Mode -->|Auto · Jev| Catalog["读取 Harness 模型目录<br/>过滤不兼容的候选模型"]
+    Catalog --> Count{"符合条件的候选数量"}
+    Count -->|没有| Stop["报错结束"]
+    Count -->|一个| Pin["记录决策<br/>固定本轮使用的模型"]
+    Count -->|多个| Input{"输入是否可分类？"}
+    Input -->|是| Jev["提交请求上下文和候选模型名称 / ID<br/>由 Jev 选择模型"]
+    Input -->|否| Fallback["保留仍符合条件的当前模型<br/>否则使用第一个符合条件的候选"]
+    Jev -->|返回有效选择| Pin
+    Jev -->|调用失败或响应无效| Fallback
+    Fallback --> Pin
+    Pin --> Run["生成回答<br/>工具续接和重试沿用同一模型"]
+    Manual --> Run
+```
+
+取消操作会停止路由，不触发回退。
 
 - 每个 Auto 轮次开始时，插件列出 Harness 已注册的提供方及其公布的模型。Jev 接收候选模型的名称、ID、提供方和描述，返回一个候选项标识。插件核对该标识确实属于本次候选列表后再执行路由。
 - 当输入包含图片时，插件会排除被 Harness 明确标记为不支持图片输入的模型。若没有剩余候选模型，本轮在调用 Jev 前失败。Harness 模型目录不是完整的模型访问限制，因此可直接调用但未列入目录的模型 ID 不参与候选。

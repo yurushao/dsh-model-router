@@ -1,8 +1,3 @@
----
-created: 2026-09-22
-updated: 2026-09-24
----
-
 # DSH Model Router
 
 [English](README.md) | [简体中文](README.zh.md)
@@ -45,6 +40,26 @@ The Jev API Key field writes to Harness credentials under `apiKeyEnv` (default `
 For a profile with its own provider configuration, see [OpenRouter example](examples/openrouter.patch.yml). For models already configured in Harness, use [the provider-neutral overlay](examples/router.patch.yml). Put these entries in the active profile’s `cordis.patch.yml` to keep them editable in the UI; command-line `--patch` overrides take precedence and prevent saving those fields. Merge provider dictionaries carefully because a profile override can replace other providers. The Jev request and selected answer model may each incur charges.
 
 ## Behavior
+
+```mermaid
+flowchart TD
+    Start["New user turn"] --> Mode{"Model selection"}
+    Mode -->|Manual| Manual["Use the selected model"]
+    Mode -->|Auto · Jev| Catalog["Read Harness model catalog<br/>Filter incompatible candidates"]
+    Catalog --> Count{"Eligible candidates"}
+    Count -->|None| Stop["Report an error"]
+    Count -->|One| Pin["Record decision<br/>Pin model for this turn"]
+    Count -->|Multiple| Input{"Input can be classified?"}
+    Input -->|Yes| Jev["Send request context and candidate names / IDs<br/>Jev selects a model"]
+    Input -->|No| Fallback["Keep eligible current model<br/>Otherwise use first eligible candidate"]
+    Jev -->|Valid choice| Pin
+    Jev -->|Unavailable or invalid response| Fallback
+    Fallback --> Pin
+    Pin --> Run["Generate the answer<br/>Reuse model for tool continuations and retries"]
+    Manual --> Run
+```
+
+Cancellation stops routing without invoking fallback.
 
 - At the start of each Auto turn, the plugin lists registered Harness providers and their advertised models. Jev receives candidate names, IDs, providers and descriptions, then returns one candidate key. The plugin validates that key against the exact candidate list before routing.
 - A model explicitly marked by Harness as lacking image input is excluded for a turn containing images. If no candidate remains, the turn fails before calling Jev. Catalog membership is advisory in Harness, so unlisted pass-through model IDs are not candidates.
